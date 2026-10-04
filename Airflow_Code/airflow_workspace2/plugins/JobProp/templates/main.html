@@ -1,1 +1,1167 @@
-testhtml
+{% extends "JobProp/base.html" %}
+
+{% block head %}
+    {{ super() }}
+    {# CSS provided by JobProp/base.html #}
+{% endblock %}
+
+{% block body %}
+    {{ super() }}
+    {% block model_menu_bar %}
+    {% endblock %}
+
+    <div class="panel panel-primary" style="margin-bottom: 10px; margin-left: 5px;">
+        <div class="panel-heading">
+            <h4 class="panel-title">Application Properties</h4>
+        </div>
+    </div>
+    <div class="container" style="position: relative; min-height: 100vh; padding-bottom: 60px;">
+        <form method="POST" autocomplete="off" id="jobprop">
+            {{ form_env.csrf_token }}
+            <!-- App Id Box-->
+            <div class="form-group" style="display: flex; align-items: center;">
+                <label for="variable_key" style="margin-right: 10px;">Application Id <span style="color: red;">*</span></label>
+                {{ form_env.key(size=20, style="width: 50%; margin-right: 10px;", onkeypress="return isNumeric(event)", readonly=key_searched , onclick="showKeyChangeModal()") }}
+                <button type="submit" name="search_key" class="btn btn-primary" style="margin-right: 10px;">Search</button>
+                <button type="button" class="btn btn-danger" onclick="clearSessionData()" style="margin-right: 10px;">Clear All Data</button>
+            </div>
+            <div style="margin-top: -10px;">
+                <span id="error_message" style="font-size: x-small; color: inherit;display: block; margin-top: -16px; margin-left:105px">(Only numbers are allowed as AppId)</span>
+            </div>
+            
+            <!--Tab structure-->
+            {% if key_found  %}
+            <ul class="nav nav-tabs" style="margin-bottom: 10px; margin-top:10px;">
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'environment' %}active{% endif %}" data-toggle="tab" href="#environment">Environment</a>
+                </li>
+                
+                {% if session.key or session.env_data %}
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'stop_job' %}active{% endif %}" data-toggle="tab" href="#stop_job">Stop Jobs</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'project_server' %}active{% endif %}" data-toggle="tab" href="#project_server">Project Server</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'dr' %}active{% endif %}" data-toggle="tab" href="#dr">DR</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'service_account' %}active{% endif %}" data-toggle="tab" href="#service_account">Service Account</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'summary' %}active{% endif %}" data-toggle="tab" href="#summary">Summary</a>
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
+            
+            <!-- Environment tab content -->
+            <div class="tab-content" style="padding: 10px;">
+                {% if key_found  %}
+                <div class="tab-pane {% if active_tab == 'environment' %}active{% endif %}" id="environment">
+                    <input type="hidden" id="active_tab" name="active_tab" value="environment">
+                    {% for env in env_values %}
+                    <div class="form-group">
+                        {{ form_env['env_' + env.lower()] }}
+                        {{ form_env['env_' + env.lower()].label }}
+                    </div>
+                    {% endfor %}
+                    <div id="validationMessage" style="color: red; display: none;">Please select at least one environment.</div>
+                    <button type="submit" name="save_env"  form="jobprop"  class="btn btn-primary"  {% if is_prepopulating %} onclick="return validateCheckboxes() && showDependencyModal(envDependencies)" {% else %}onclick="return validateCheckboxes()" {% endif %}>Save and Next →</button>
+                </div>
+                {% endif %}
+            <!-- Stop Job tab content -->
+                {% if session.key or session.env_data %}
+                <div class="tab-pane {% if active_tab == 'stop_job' %}active{% endif %}" id="stop_job">
+                    <input type="hidden" id="active_tab" name="active_tab" value="stop_job">
+                    {% for env in env_values %}
+                {% if session.env_data[env] == 'Yes' or form_env['env_' + env.lower()].data %}
+                    <div class="form-group">
+                        {{ form_stop_job['stop_job_' + env.lower()] }}
+                        {{ form_stop_job['stop_job_' + env.lower()].label }}
+                    </div>
+                {% endif %}
+                {% endfor %}
+                    <button type="submit" name="save_stop_job" class="btn btn-primary">Save and Next →</button>
+                </div>
+
+                <!-- Project server tab content -->
+                <div class="tab-pane {% if active_tab == 'project_server' %}active{% endif %}" id="project_server">
+                    <input type="hidden" id="selected_server_type" name="selected_server_type" value="">
+                    <input type="hidden" id="selected_priority" name="selected_priority" value="">
+                    <div class="form-group row">   
+                        <div class="col-md-3">
+                            <!-- Server Type dropdown -->
+                            <label for="server_type">Server Type <span style="color: red;">*</label>
+                            <select id="server_type" name="server_type" class="form-control">
+                                <option value="">Select Server Type</option>
+                                {% for env in env_values %}
+                                {% if session.env_data[env] == 'Yes' %}
+                                    <option value="{{ env }}" >{{ env }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Priority dropdown -->
+                        <div class="col-md-3">
+                            <label for="priority">Priority <span style="color: red;">*</label>
+                            <select id="priority" name="priority" class="form-control">
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Server Name input box -->
+                    <div class="form-group">
+                        <label for="server_name">Server Name <span style="color: red;">*</span> <span style="font-size: x-small; color: inherit;">(Only alphanumeric characters are allowed)</span></label>
+                        <input type="text" id="server_name" name="server_name" class="form-control" placeholder="Server Name" style="width: 50%;" onkeypress="return isAlphanumeric(event)">
+                    </div>
+                    <!-- Port input box -->
+                    <div class="form-group">
+                        <label for="port">Port <span style="color: red;">*</span></label>
+                        <input type="text" id="port" name="port" class="form-control" placeholder="Port" style="width: 50%;" value="{{session.port}}" onkeypress=" return restrictInput(event)" onpaste="return preventPaste(event)"  >
+                    </div>
+                    <button type="submit" name="add_server" class="btn btn-secondary" style="margin-bottom: 10px;">Add</button>
+                    
+                    <!-- table structure inside the project server tab content -->
+                    <table class="table table-bordered" id="server_table">
+                        {% if project_server_data %}
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;">Server Type</th>
+                                <th style="text-align: center;">Priority</th>
+                                <th style="text-align: center;">Server Name</th>
+                                <th style="text-align: center;">Port</th>
+                                <th style="text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        {% endif %}
+                        <tbody>
+                            {% for server in session['project_server_data'] %}
+                            <tr>
+                                <td style="text-align: center;">
+                                    {{ server['Server_Type'] }}
+                                </td>
+                                <td style="text-align: center;">
+                                    {{ server['Priority'] }}
+                                </td>
+                                <td style="text-align: center;">
+                                    <input type="text" name="edit_server_name_{{ loop.index }}" value="{{ server['Server_Name'] }}" class="form-control" style="width: 50%; margin: 0 auto;" onkeypress="return isAlphanumeric(event)" >
+                                </td>
+                                <td style="text-align: center;">
+                                    <input type="text" name="edit_port_{{ loop.index }}" value="{{ server['Port'] }}" class="form-control" style="width: 50%; margin: 0 auto;"  onkeypress=" return restrictInput(event)" onpaste="return preventPaste(event)" >
+                                </td>
+                                <td style="text-align: center;">
+                                    <input type="hidden" name="edit_server_type_{{ loop.index }}" value="{{ server['Server_Type'] }}">
+                                    <input type="hidden" name="edit_priority_{{ loop.index }}" value="{{ server['Priority'] }}">
+                                    <button type="submit" name="edit_server" value="{{ loop.index }}" class="btn btn-warning">Update</button>
+                                    <button type="submit" name="delete_server" class="btn btn-danger" value="{{ server['Server_Type'] }}|{{ server['Priority'] }}">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <button type="submit" name="save_project_server" class="btn btn-primary">Validate and Next →</button>
+                </div>
+
+                <!-- DR tab content -->
+                <div class="tab-pane {% if active_tab == 'dr' %}active{% endif %}" id="dr">
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label for="dr_enabled">Is DR Enabled?</label>
+                        <input type="checkbox" id="dr_enabled" name="dr_enabled" style="margin-left: 20px; padding: 10px;" {% if form_dr.dr_enabled.data %}checked{% endif %}>
+                    </div>
+                    <button type="submit" name="save_dr" class="btn btn-primary">Save and Next →</button>
+                </div>
+
+                <!-- Service Account tab content -->
+                
+                <div class="tab-pane {% if active_tab == 'service_account' %}active{% endif %}" id="service_account">
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr class="service-account-field">
+                                <td>PROD<span style="color: red;">*</span></td>
+                                <td>{{ form_service_account.service_account_prod|safe }}</td>
+                            </tr>
+                            <tr class="service-account-field">
+                                <td>NON PROD<span style="color: red;">*</span></td>
+                                <td>{{ form_service_account.service_account_non_prod|safe }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="font-size: x-small; color: inherit; margin-bottom: 10px;">(Please enter "Not Applicable" if there is No Service Account for the app)</div>
+                    <button type="submit" name="save_service_account" class="btn btn-primary">Save and Next →</button>
+                </div>
+ 
+                {% endif %}
+                
+            <!-- Summary tab content -->
+            {% if session.key or session.env_data %}
+            <div class="tab-pane {% if active_tab == 'summary' %}active{% endif %}" id="summary">
+                <h4>Summary</h4>
+                <p>Review all the information before submitting.</p>
+                
+                <pre id="summary_json">
+                    {
+                    "Environment": {{ summary_data.Environment | tojson }},
+                    "STOP_JOB": {{ summary_data.STOP_JOB | tojson }},
+                    "SERVER_MAPPING": {{ summary_data.SERVER_MAPPING | tojson }},
+                    "IS_DR_ENABLED": "{{ summary_data.IS_DR_ENABLED }}",
+                    "PROD_SERVICE_ACCOUNT": 
+                       {{ summary_data.PROD_SERVICE_ACCOUNT }}
+                    ,
+                    "NON_PROD_SERVICE_ACCOUNT": 
+                        {{ summary_data.NON_PROD_SERVICE_ACCOUNT  }}
+                    
+                }
+                </pre>
+                
+                <!-- Submit all button -->
+                <div style="text-align: center; margin-top: 20px;">
+                    <p id="errorMessage" style="color: red; display: none;">Please add the data and save the TABS before submitting.<span style="font-size: smaller;">
+                        (Environment, Project Server , and Service Account should be saved for submit.)
+                    </span></p>
+                    <p id="validationErrorMessage" style="color: red; display: none;">Project Server data validation is required, please press 'Validate and Next →' button.</p>
+                    <button type="submit" form="jobprop" class="btn btn-success" id="submitBtn">Submit All</button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Modal for Showing wehther Stop Job and Dr is saved or not -->
+            <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="confirmationModalLabel">Confirm Submission</h5>
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </div>
+                    <div class="modal-body">
+                        {% if is_prepopulating %}
+                            {% if stop_job_saved and dr_saved %}
+                                <p>Are you sure you want to submit the data?</p>
+                            {% elif not stop_job_saved and not dr_saved %}
+                                <p>Stop Job and DR tabs are not saved, they will retain their old values.</p>
+                            {% elif not stop_job_saved %}
+                                <p>Stop Job tab is not saved, it will retain its old value. </p>
+                            {% elif not dr_saved %}
+                                <p>DR tab is not saved, it will retain its old value.</p>
+                            {% endif %}
+                        {% else %}
+                            {% if stop_job_saved and dr_saved %}
+                                <p>Are you sure you want to submit the data?</p>
+                            {% elif not stop_job_saved and not dr_saved %}
+                                <p>Stop Job and DR tabs are not saved, they will take default as "No". Do you want to proceed with the submission?</p>
+                            {% elif not stop_job_saved %}
+                                <p>Stop Job tab data has not been saved. It will take default as "No". Do you want to proceed with the submission?</p>
+                            {% elif not dr_saved %}
+                                <p>DR tab data has not been saved. It will take default as "No". Do you want to proceed with the submission?</p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                      <button type="button"   class="btn btn-primary" id="proceedSubmit">Proceed to Submit</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DEpendency modal for Environment tab -->
+              <div id="dependencyModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="dependencyModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="dependencyModalLabel">Dependency Warning</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="dependencyMessage"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cancelButton">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="proceedButton" id="proceedButton">Proceed</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Dependency modal for Server name delete -->
+            <div id="serverDependencyModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="serverDependencyModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="serverDependencyModalLabel">Dependency Warning</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="serverDependencyMessage"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" id="cancelServerDelete" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="proceedServerDelete">Proceed</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for confirming key change -->
+            <div class="modal fade" id="keyChangeModal" tabindex="-1" role="dialog" aria-labelledby="keyChangeModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="keyChangeModalLabel">Change Key</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            To change the AppId you need to clear the data first, please click "Clear All Data" button.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="clearDataButton">Clear All Data</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+  
+        </form>
+    </div>
+    
+{% endblock %}
+
+{% block tail %}
+    {{ super() }}
+    <script>
+
+
+function restrictInput(event) {
+    const key = event.key;
+    if (!/[0-9]/.test(key)) {
+        event.preventDefault();
+    }
+}
+
+function preventPaste(event) {
+    event.preventDefault();
+            const paste = (event.clipboardData || window.clipboardData).getData('text');
+            if (/^[0-9]+$/.test(paste)) {
+                document.execCommand('insertText', false, paste);
+            }
+        }
+
+
+var nextPriorities = {{ next_priorities | tojson }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    var serverType = "{{ server_type }}";
+    var priority = "{{ priority }}";
+    var serverName = "{{ server_name }}";
+
+    console.log("Server Type from session:", serverType);
+    console.log("Priority from session:", priority);
+    console.log("Server Name from session:", serverName);
+
+    // Function to set the dropdown value
+    function setDropdownValue(dropdown, value) {
+        if (dropdown && value) {
+            for (var i = 0; i < dropdown.options.length; i++) {
+                if (dropdown.options[i].value === value) {
+                    dropdown.selectedIndex = i;
+                    dropdown.value = value; // Ensure the value is set
+                    dropdown.dispatchEvent(new Event('change')); // Trigger change event
+                    console.log(dropdown.id + " set to:", dropdown.options[i].value);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Function to update the priority dropdown based on the selected server type
+    function updatePriority(callback) {
+        var serverType = document.getElementById('server_type').value; // Get the selected server type
+        var priorityDropdown = document.getElementById('priority'); // Get the priority dropdown
+        var nextPriorityOptions = nextPriorities[serverType] || []; // Get the next priority options for the selected server type
+
+        // Clear existing options
+        priorityDropdown.innerHTML = '';
+
+        // Create a document fragment to improve performance
+        var fragment = document.createDocumentFragment();
+
+        // Populate the dropdown with new options
+        var blankOption = document.createElement('option');
+        blankOption.value = '';
+        blankOption.text = 'Select Priority';
+        fragment.appendChild(blankOption);
+
+        // Populate the dropdown with new options
+        nextPriorityOptions.forEach(function(priority) {
+            var option = document.createElement('option');
+            option.value = priority;
+            option.text = priority;
+            fragment.appendChild(option);
+        });
+
+        // Append the fragment to the dropdown
+        priorityDropdown.appendChild(fragment);
+
+        // Ensure no option is selected by default
+        priorityDropdown.value = '';
+
+        // Automatically select the previously selected priority if available
+        if (nextPriorityOptions.includes(priority)) {
+            setDropdownValue(priorityDropdown, priority);
+        }
+
+        // Call the callback function if provided
+        if (callback) {
+            callback();
+        }
+    }
+
+    // Set the server type and priority dropdown values
+    function setDropdownValues() {
+        var serverTypeDropdown = document.getElementById('server_type');
+        if (serverTypeDropdown) {
+            setDropdownValue(serverTypeDropdown, serverType);
+            updatePriority(function() {
+                var priorityDropdown = document.getElementById('priority');
+                setDropdownValue(priorityDropdown, priority);
+            });
+        }
+    }
+    function setServerNameValue() {
+        var serverNameInput = document.getElementById('server_name');
+        if (serverNameInput) {
+            serverNameInput.value = serverName;
+        }
+    }
+
+    // Add event listener to the server type dropdown
+    document.getElementById('server_type').addEventListener('change', function() {
+        updatePriority();
+    });
+
+    // Initial population of priority based on the selected server type
+    setDropdownValues();
+    setServerNameValue();
+});
+
+// For Service Account 
+document.addEventListener('DOMContentLoaded', function() {
+    // Store the initial state of the service account fields
+    var initialProdServiceAccount = '{{ form_service_account.service_account_prod.data or "" }}';
+    var initialNonProdServiceAccount = '{{ form_service_account.service_account_non_prod.data or "" }}';
+ 
+    function resetServiceAccountFields() {
+        var prodField = document.querySelector('[name="service_account_prod"]');
+        var nonProdField = document.querySelector('[name="service_account_non_prod"]');
+        prodField.value = initialProdServiceAccount;
+        nonProdField.value = initialNonProdServiceAccount;
+    }
+ 
+    // Call resetServiceAccountFields when any other tab is shown
+    document.querySelectorAll('.nav-link').forEach(function(tab) {
+        tab.addEventListener('click', function(event) {
+            if (!event.target.href.includes('#service_account')) {
+                resetServiceAccountFields();
+            }
+        });
+    });
+ 
+    // Ensure the fields are updated when the page loads
+    resetServiceAccountFields();
+});
+ 
+document.addEventListener('DOMContentLoaded', function() {
+            function restrictSpaces(event) {
+                var charCode = event.which ? event.which : event.keyCode;
+                if (charCode === 32) { // space character
+                    event.preventDefault();
+                    return false;
+                }
+                return true;
+            }
+ 
+            function validatePaste(event) {
+                var paste = (event.clipboardData || window.clipboardData).getData('text');
+                if (/\s/.test(paste)) { // check for spaces
+                    event.preventDefault();
+                }
+            }
+ 
+            function decodeHtmlEntities() {
+                const elements = document.querySelectorAll('.service-account-field td');
+                elements.forEach(element => {
+                    element.innerHTML = element.innerHTML.replace(/&amp;/g, '&');
+                });
+            }
+ 
+            function addSpaceRestriction() {
+                const prodInput = document.querySelector('[name="service_account_prod"]');
+                const nonProdInput = document.querySelector('[name="service_account_non_prod"]');
+ 
+                if (prodInput) {
+                    prodInput.addEventListener('keypress', restrictSpaces);
+                    prodInput.addEventListener('paste', validatePaste);
+                }
+ 
+                if (nonProdInput) {
+                    nonProdInput.addEventListener('keypress', restrictSpaces);
+                    nonProdInput.addEventListener('paste', validatePaste);
+                }
+            }
+ 
+            function onTabSwitch() {
+                const serviceAccountTab = document.getElementById('service_account');
+                if (serviceAccountTab.classList.contains('active')) {
+                    decodeHtmlEntities();
+                    addSpaceRestriction();
+                }
+            }
+ 
+            // Run decodeHtmlEntities and addSpaceRestriction on page load
+            decodeHtmlEntities();
+            addSpaceRestriction();
+ 
+            // Add event listener for tab switch
+            document.querySelectorAll('.nav-tabs a').forEach(tab => {
+                tab.addEventListener('click', onTabSwitch);
+            });
+ 
+            // Use MutationObserver to detect changes in the tab's active state
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    if (mutation.attributeName === 'class') {
+                        onTabSwitch();
+                    }
+                });
+            });
+ 
+            const serviceAccountTab = document.getElementById('service_account');
+            observer.observe(serviceAccountTab, { attributes: true });
+        });
+ 
+ 
+// Servername and port in edit section of project server data
+document.addEventListener('DOMContentLoaded', function() {
+    // Store the initial state of the server names and ports
+    var initialServerData = {};
+    document.querySelectorAll('input[name^="edit_server_name_"], input[name^="edit_port_"]').forEach(function(input) {
+        initialServerData[input.name] = input.value;
+    });
+
+    function resetServerData() {
+        document.querySelectorAll('input[name^="edit_server_name_"], input[name^="edit_port_"]').forEach(function(input) {
+            input.value = initialServerData[input.name];
+        });
+    }
+
+    // Call resetServerData when the project server tab is shown
+    document.querySelector('.nav-link[href="#project_server"]').addEventListener('click', function(event) {
+        resetServerData();
+    });
+
+    // Ensure the server names and ports are updated when the page loads
+    resetServerData();
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Store the initial state of the DR checkbox
+    var initialDrState = {{ form_dr.dr_enabled.data | tojson }};
+    console.log('Initial DR state:', initialDrState);
+   
+    // Store the initial state of the Stop Job checkboxes for each environment from session data
+    var initialStopJobState = {};
+    var stopJobSessionData = {{ session.get('stop_job_data', {}) | tojson }};
+    console.log('Stop Job session data:', stopJobSessionData);
+   
+    {% for env in env_values %}
+        initialStopJobState['{{ env }}'] = (stopJobSessionData['{{ env }}'] === 'Yes');
+        console.log('Initial state for {{ env }}:', initialStopJobState['{{ env }}']);
+    {% endfor %}
+
+    // Store the initial state of the Environment checkboxes
+    var initialEnvState = {};
+    var envSessionData = {{ session.get('env_data', {}) | tojson }};
+    console.log('Environment session data:', envSessionData);
+
+    {% for env in env_values %}
+        initialEnvState['{{ env }}'] = (envSessionData['{{ env }}'] === 'Yes');
+        console.log('Initial state for {{ env }}:', initialEnvState['{{ env }}']);
+    {% endfor %}
+ 
+    function resetCheckboxState() {
+        // Reset DR checkbox
+        var drCheckbox = document.getElementById('dr_enabled');
+        if (drCheckbox) {
+            drCheckbox.checked = initialDrState;
+            console.log('Reset DR checkbox to:', drCheckbox.checked);
+        } else {
+            console.log('DR checkbox not found');
+        }
+       
+        // Reset Stop Job checkboxes for each environment
+        {% for env in env_values %}
+            var stopJobCheckbox = document.getElementById('stop_job_{{ env.lower() }}');
+            if (stopJobCheckbox) {
+                stopJobCheckbox.checked = initialStopJobState['{{ env }}'];
+                console.log('Reset {{ env }} checkbox to:', stopJobCheckbox.checked);
+            } else {
+                console.log('{{ env }} checkbox not found');
+            }
+        {% endfor %}
+
+        // Reset Environment checkboxes for each environment
+        {% for env in env_values %}
+            var envCheckbox = document.getElementById('env_{{ env.lower() }}');
+            if (envCheckbox) {
+                envCheckbox.checked = initialEnvState['{{ env }}'];
+                console.log('Reset {{ env }} checkbox to:', envCheckbox.checked);
+            } else {
+                console.log('{{ env }} checkbox not found');
+            }
+        {% endfor %}
+    }
+ 
+    function updateInitialCheckboxState() {
+        // Update the initial state of the Stop Job checkboxes for each environment
+        {% for env in env_values %}
+            var stopJobCheckbox = document.getElementById('stop_job_{{ env.lower() }}');
+            if (stopJobCheckbox) {
+                initialStopJobState['{{ env }}'] = stopJobCheckbox.checked;
+                console.log('Updated initial state for {{ env }} to:', initialStopJobState['{{ env }}']);
+            } else {
+                console.log('{{ env }} checkbox not found for update');
+            }
+        {% endfor %}
+
+        // Update the initial state of the Environment checkboxes for each environment
+        {% for env in env_values %}
+            var envCheckbox = document.getElementById('env_{{ env.lower() }}');
+            if (envCheckbox) {
+                initialEnvState['{{ env }}'] = envCheckbox.checked;
+                console.log('Updated initial state for {{ env }} to:', initialEnvState['{{ env }}']);
+            } else {
+                console.log('{{ env }} checkbox not found for update');
+            }
+        {% endfor %}
+    }
+ 
+    // Call resetCheckboxState when the DR, Stop Job, or Environment tab is shown
+    var drTabLink = document.querySelector('.nav-link[href="#dr"]');
+    if (drTabLink) {
+        drTabLink.addEventListener('click', function(event) {
+            console.log('DR tab clicked');
+            resetCheckboxState();
+        });
+    } else {
+        console.log('DR tab link not found');
+    }
+ 
+    var stopJobTabLink = document.querySelector('.nav-link[href="#stop_job"]');
+    if (stopJobTabLink) {
+        stopJobTabLink.addEventListener('click', function(event) {
+            console.log('Stop Job tab clicked');
+            resetCheckboxState();
+        });
+    } else {
+        console.log('Stop Job tab link not found');
+    }
+
+    var envTabLink = document.querySelector('.nav-link[href="#environment"]');
+    if (envTabLink) {
+        envTabLink.addEventListener('click', function(event) {
+            console.log('Environment tab clicked');
+            resetCheckboxState();
+        });
+    } else {
+        console.log('Environment tab link not found');
+    }
+ 
+    // Ensure the checkboxes are updated when the page loads
+    console.log('Page loaded, resetting checkbox states');
+    resetCheckboxState();
+ 
+    // Uncomment the following lines to update the initial state when the form is saved
+    // document.querySelector('form').addEventListener('submit', function(event) {
+    //     updateInitialCheckboxState();
+    // });
+   
+    console.log('Initial Stop Job state:', initialStopJobState);
+    console.log('Initial Environment state:', initialEnvState);
+    console.log('PROD checkbox state:', initialStopJobState['PROD']);
+    console.log('DR checkbox state:', initialStopJobState['DR']);
+});
+
+
+// Whether the AppId is searched or not if searched then make it disable and show the modal if the input box is pressed
+function showKeyChangeModal() {
+    var keySearched = {{ key_searched | tojson }};
+    if(keySearched){
+        $('#keyChangeModal').modal('show');
+    }
+    
+}
+
+document.getElementById('clearDataButton').addEventListener('click', function() {
+    clearSessionData();
+    $('#keyChangeModal').modal('hide');
+});
+
+// Clear Data button
+function clearSessionData() {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('jobprop.job_properties') }}";
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'clear_session';
+    input.value = 'true';
+    form.appendChild(input);
+
+    // Add CSRF token
+    const csrfToken = "{{ csrf_token() }}";
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+//Delete button dependency
+document.addEventListener('DOMContentLoaded', function() {
+    var envDependencies = {{ env_dependencies | tojson }};
+    var isPrepopulating = {{ is_prepopulating | tojson }};
+    console.log("Environment Dependencies:", envDependencies);
+    console.log("Is Prepopulating:", isPrepopulating);
+
+    function showServerDependencyModal(deleteValue) {
+        var modal = document.getElementById('serverDependencyModal');
+        var message = `The server with the following details has dependencies: ${deleteValue.replace('|', ' with priority ')}. Do you want to proceed?`;
+        document.getElementById('serverDependencyMessage').innerText = message;
+        document.getElementById('proceedServerDelete').setAttribute('data-delete-value', deleteValue);
+        $('#serverDependencyModal').modal('show');
+        return false; // Prevent form submission until modal is confirmed
+    }
+
+    // Attach event listener to delete buttons
+    document.querySelectorAll('button[name="delete_server"]').forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            var deleteValue = this.value;
+            var serverType = deleteValue.split('|')[0];
+
+            if (isPrepopulating && envDependencies.includes(serverType.toUpperCase())) {
+                showServerDependencyModal(deleteValue);
+            } else {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'delete_server';
+                input.value = deleteValue;
+                document.getElementById('jobprop').appendChild(input);
+                document.getElementById('jobprop').submit(); // Submit the form
+            }
+        });
+    });
+
+    // Handle the proceed button click in the modal
+    document.getElementById('proceedServerDelete').addEventListener('click', function() {
+        var deleteValue = this.getAttribute('data-delete-value');
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'delete_server';
+        input.value = deleteValue;
+        document.getElementById('jobprop').appendChild(input);
+        $('#serverDependencyModal').modal('hide'); // Hide the modal
+        document.getElementById('jobprop').submit(); // Submit the form
+    });
+
+    // Handle the cancel button click in the modal
+    document.getElementById('cancelServerDelete').addEventListener('click', function() {
+        $('#serverDependencyModal').modal('hide');
+    });
+});
+
+
+//Environment dependecy
+document.addEventListener('DOMContentLoaded', function() {
+    var envDependencies = {{ env_dependencies | tojson }};
+    var envData = {{ env_data | tojson }};
+    var isPrepopulating = {{ is_prepopulating | tojson }};
+    console.log("Environment Dependencies:", envDependencies);
+    console.log("Environment Data:", envData);
+    console.log("Is Prepopulating:", isPrepopulating);
+
+    var initialCheckboxStates = {};
+
+    // Store the initial state of checkboxes
+    document.querySelectorAll('#environment input[type="checkbox"]').forEach(checkbox => {
+        initialCheckboxStates[checkbox.id] = checkbox.checked;
+    });
+
+    function validateCheckboxes() {
+        var checkboxes = document.querySelectorAll('#environment input[type="checkbox"]');
+        var isChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+        if (!isChecked) {
+            console.log("No checkboxes selected");
+            document.getElementById('validationMessage').style.display = 'block';
+            return false;
+        }
+        return true;
+    }
+
+    function showDependencyModal(dependencies) {
+        var modal = document.getElementById('dependencyModal');
+        var message = `The following environments have dependencies: ${dependencies.join(', ')}. If you uncheck here the corresponding servername in project server will also get deleted.`;
+        document.getElementById('dependencyMessage').innerText = message;
+        $('#dependencyModal').modal('show');
+        return false; // Prevent form submission until modal is confirmed
+    }
+
+    // Attach validateCheckboxes to the Save and Next button
+    var saveButton = document.querySelector('button[name="save_env"]');
+    if (saveButton) {
+        saveButton.addEventListener('click', function(event) {
+            if (!validateCheckboxes()) {
+                event.preventDefault();
+                return;
+            }
+
+            if (isPrepopulating) {
+                var checkboxesChanged = false;
+                var dependentCheckboxChanged = false;
+
+                // Check if any checkbox state has changed
+                document.querySelectorAll('#environment input[type="checkbox"]').forEach(checkbox => {
+                    if (initialCheckboxStates[checkbox.id] !== checkbox.checked) {
+                        checkboxesChanged = true;
+                        if (envDependencies.includes(checkbox.id.replace('env_', '').toUpperCase())) {
+                            dependentCheckboxChanged = true;
+                        }
+                    }
+                });
+
+                if (checkboxesChanged && dependentCheckboxChanged) {
+                    event.preventDefault();
+                    showDependencyModal(envDependencies);
+                }
+            }
+        });
+    } else {
+        console.error('Save button not found');
+    }
+
+    var proceedButton = document.getElementById('proceedButton');
+    if (proceedButton) {
+        proceedButton.addEventListener('click', function() {
+            if (validateCheckboxes()) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'save_env';
+                input.value = 'true';
+                document.getElementById('jobprop').appendChild(input);
+                $('#dependencyModal').modal('hide'); // Hide the modal
+                document.getElementById('jobprop').submit(); // Submit the form
+            } else {
+                $('#dependencyModal').modal('hide'); // Hide the modal
+            }
+        });
+    } else {
+        console.error('Proceed button not found');
+    }
+
+    var cancelButton = document.getElementById('cancelButton');
+    if (cancelButton) {
+        cancelButton.addEventListener('click', function() {
+            revertCheckboxes();
+            $('#dependencyModal').modal('hide');
+        });
+    } else {
+        console.error('Cancel button not found');
+    }
+    $('#dependencyModal').on('hidden.bs.modal', function () {
+    revertCheckboxes();
+});
+
+
+    function revertCheckboxes() {
+        document.querySelectorAll('#environment input[type="checkbox"]').forEach(checkbox => {
+            var envName = checkbox.id.replace('env_', '').toUpperCase();
+            checkbox.checked = envData[envName] === 'Yes';
+        });
+    }
+});
+
+
+        //allow number for key
+function isNumeric(event) {
+    var charCode = (event.which) ? event.which : event.keyCode;
+    if (charCode < 48 || charCode > 57) {
+        return false;
+    }
+    return true;
+}
+    // Allow alphanumeric characters only
+function isAlphanumeric(event) {
+    var charCode = event.which ? event.which : event.keyCode;
+    if ((charCode >= 48 && charCode <= 57) || // numeric (0-9)
+        (charCode >= 65 && charCode <= 90) || // upper alpha (A-Z)
+        (charCode >= 97 && charCode <= 122)) { // lower alpha (a-z)
+        return true;
+    }
+    return false;
+}
+document.getElementById('key').addEventListener('paste', function(event) {
+    var paste = (event.clipboardData || window.clipboardData).getData('text');
+    if (!/^\d*$/.test(paste)) {
+        event.preventDefault();
+    }
+});
+
+document.getElementById('server_name').addEventListener('paste', function(event) {
+    var paste = (event.clipboardData || window.clipboardData).getData('text');
+    if (!/^[a-zA-Z0-9]*$/.test(paste)) {
+        event.preventDefault();
+    }
+});
+
+document.querySelectorAll('input[name^="edit_server_name_"]').forEach(function(input) {
+    input.addEventListener('paste', function(event) {
+        var paste = (event.clipboardData || window.clipboardData).getData('text');
+        if (!/^[a-zA-Z0-9]*$/.test(paste)) {
+            event.preventDefault();
+        }
+    });
+});
+
+// Timer for flash messages
+document.addEventListener('DOMContentLoaded', function() {
+    window.setTimeout(function() {
+        $(".alert").slideUp(500, function(){
+            $(this).remove(); 
+        });
+    }, 10000); // Show for 10 seconds
+});
+
+
+
+ document.addEventListener('DOMContentLoaded', function() {
+     console.log("Document loaded, setting up event listeners");
+         const activeTab = "{{ active_tab }}"; // Get the active tab from the server-side variable
+         console.log("Active tab:", activeTab);
+         if (activeTab) {
+        const activeTabElement = document.querySelector(`.nav-link[href="#${activeTab}"]`);
+        if (activeTabElement) {
+            console.log("Active tab element found:", activeTabElement);
+            activeTabElement.style.backgroundColor = 'lightgray'; // Set background color for active tab
+            activeTabElement.style.color = 'black'; // Set text color for active tab
+        } else {
+            console.log("Active tab element not found");
+        }
+    } else {
+        console.log("No active tab specified");
+    }
+
+// Add event listeners to tabs to change color on click
+document.querySelectorAll('.nav-link').forEach(tab => {
+    tab.addEventListener('click', function(event) {
+        event.preventDefault();
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.style.backgroundColor = ''; // Reset background color
+                link.style.color = ''; // Reset text color
+            });
+            this.style.backgroundColor = 'lightgray'; // Set background color for active tab
+            this.style.color = 'black'; // Set text color for active tab
+            });
+        });
+});
+
+function validateCheckboxes() {
+    var checkboxes = document.querySelectorAll('#environment input[type="checkbox"]');
+    var isChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+    if (!isChecked) {
+        document.getElementById('validationMessage').style.display = 'block';
+        return false;
+    }
+    return true;
+}
+
+
+
+document.getElementById('submitBtn').addEventListener('click', function(event) {
+    var submitAllDisabled = {{ submit_all_disabled | tojson }};
+    var isPrepopulating = {{ is_prepopulating | tojson }};
+    var isProjectServerValid = {{ is_project_server_valid | tojson }};
+    var isEnvironmentUpdated = {{ session['is_environment_updated'] | tojson }};
+    
+    if (!isPrepopulating && submitAllDisabled) {
+        document.getElementById('errorMessage').style.display = 'block';
+        document.getElementById('validationErrorMessage').style.display = 'none';
+        event.preventDefault(); // Prevent form submission
+    } else if (!isProjectServerValid || isEnvironmentUpdated) {
+        document.getElementById('validationErrorMessage').style.display = 'block';
+        document.getElementById('errorMessage').style.display = 'none';
+        event.preventDefault(); // Prevent form submission
+    } else {
+        document.getElementById('errorMessage').style.display = 'none';
+        document.getElementById('validationErrorMessage').style.display = 'none';
+        $('#confirmationModal').modal('show'); // Show the modal
+        event.preventDefault();
+    }
+});
+
+// Add the hidden input field with the name attribute
+document.getElementById('proceedSubmit').addEventListener('click', function() {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'submit_all';
+    input.value = 'true';
+    document.getElementById('jobprop').appendChild(input);
+        $('#confirmationModal').modal('hide'); // Hide the modal
+        document.getElementById('jobprop').submit(); // Submit the form
+});
+
+
+// Handle edit button click
+document.addEventListener('DOMContentLoaded', function() {    
+    document.querySelectorAll('.edit-row').forEach(button => {
+        button.addEventListener('click', function() {
+            var serverType = this.getAttribute('data-server-type');
+            var priority = this.getAttribute('data-priority');
+            var serverName = this.getAttribute('data-server-name');
+
+            document.getElementById('edit_server_type').value = serverType;
+            document.getElementById('edit_priority').value = priority;
+            document.getElementById('edit_server_name').value = serverName;
+
+            $('#editModal').modal('show');
+        });
+});
+
+// Handle save changes button click in the modal
+document.getElementById('saveEdit').addEventListener('click', function() {
+    document.getElementById('editForm').submit();
+    });
+});
+
+
+
+// Function to add a new server
+function addServer() {
+    var serverType = document.getElementById('server_type').value;
+    var priority = document.getElementById('priority').value;
+    var serverName = document.getElementById('server_name').value;
+
+    if (serverType && priority && serverName) {
+        var tbody = document.getElementById('server_table').querySelector('tbody');
+        var newIndex = tbody.children.length;
+        var newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td style="text-align: center;"><input type="hidden" name="servers-${newIndex}-server_type" value="${serverType}">${serverType}</td>
+            <td style="text-align: center;"><input type="hidden" name="servers-${newIndex}-priority" value="${priority}">${priority}</td>
+            <td style="text-align: center;"><input type="text" name="servers-${newIndex}-server_name" value="${serverName}" class="form-control" style="width: 50%; margin: auto;"></td>
+            <td class="action-cell" style="text-align: center;">
+                <button type="button" class="remove-row btn btn-danger">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(newRow);
+
+        // Attach event listeners to the new buttons
+        newRow.querySelector('.remove-row').addEventListener('click', removeRow);
+
+        // Disable the selected priority for the specific server type
+        disablePriority(serverType, priority);
+
+        // Clear input fields and reset dropdowns
+        document.getElementById('server_name').value = '';
+        document.getElementById('server_type').value = '';
+        resetPriorityOptions();
+    }
+}
+
+function disablePriority(serverType, priority) {
+    var options = document.querySelectorAll(`#priority option`);
+    options.forEach(option => {
+        if (option.value === priority) {
+            option.disabled = true;
+        }
+    });
+}
+
+function resetPriorityOptions() {
+    var options = document.querySelectorAll(`#priority option`);
+    options.forEach(option => {
+        option.disabled = false;
+    });
+    document.getElementById('priority').value = '';
+}
+
+document.getElementById('server_type').addEventListener('change', function() {
+    var serverType = this.value;
+    var tbody = document.getElementById('server_table').querySelector('tbody');
+    var usedPriorities = [];
+
+    // Reset priority options
+    resetPriorityOptions();
+
+    tbody.querySelectorAll('tr').forEach(row => {
+        var type = row.querySelector('input[name*="server_type"]').value;
+        var priority = row.querySelector('input[name*="priority"]').value;
+        if (type === serverType) {
+            usedPriorities.push(priority);
+        }
+    });
+
+    var options = document.querySelectorAll(`#priority option`);
+    options.forEach(option => {
+        option.disabled = usedPriorities.includes(option.value);
+    });
+});
+
+
+function enablePriority(serverType, priority) {
+    var options = document.querySelectorAll(`#priority option`);
+    options.forEach(option => {
+        if (option.value === priority) {
+            option.disabled = false;
+        }
+    });
+}
+
+
+function updateFormData() {
+    var tbody = document.getElementById('server_table').querySelector('tbody');
+        tbody.querySelectorAll('tr').forEach((row, index) => {
+            row.querySelector('input[name*="server_type"]').name = `servers-${index}-server_type`;
+            row.querySelector('input[name*="priority"]').name = `servers-${index}-priority`;
+            row.querySelector('input[name*="server_name"]').name = `servers-${index}-server_name`;
+            });
+    }
+
+// Attach event listeners to existing buttons
+document.querySelectorAll('.remove-row').forEach(button => {
+    button.addEventListener('click', removeRow);
+});
+
+// Remove delete buttons when "Save Project" button is pressed
+document.querySelector('form').addEventListener('submit', function(event) {
+    var tbody = document.getElementById('server_table').querySelector('tbody');
+        tbody.querySelectorAll('tr').forEach(row => {
+        var actionCell = row.querySelector('.action-cell');
+        if (actionCell) actionCell.remove();
+        });
+    });
+    </script>
+{% endblock %}
