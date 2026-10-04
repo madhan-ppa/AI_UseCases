@@ -1,1 +1,4466 @@
-Testhtml
+<!--job_history.html-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Job History - {{ job_id }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<style>
+    * { 
+        margin: 0; 
+        padding: 0; 
+        box-sizing: border-box; 
+    }
+    
+    body {
+        font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        min-height: 100vh;
+        color: #1e293b;
+        line-height: 1.6;
+    }
+    
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 16px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(8px);
+        pointer-events: none;
+    }
+
+    .modal[style*="display: block"] {
+        pointer-events: auto;
+    }
+    
+    /* Compact Header Design */
+    .header {
+        background: #2e308e;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .job-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .job-name i {
+        font-size: 1rem;
+    }
+
+    /* Compact Job Controls */
+    .job-controls {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        border: 1px solid rgba(226, 232, 240, 0.3);
+    }
+
+    .job-controls-content {
+        padding: 0;
+    }
+
+    .job-info {
+    padding: 30px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.job-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.info-section {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.info-section h3 {
+    color: #4f46e5;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: 700;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 8px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #555;
+    font-size: 1em;
+}
+
+.info-value {
+    color: #333;
+    font-weight: 500;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    letter-spacing: 0.5px;
+}
+    /* Compact Button Styling */
+    .controls-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .control-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        transition: all 0.2s ease;
+        min-width: 120px;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .control-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .control-btn:active {
+        transform: translateY(0);
+    }
+
+    /* Premium Button Colors */
+    .btn-back { 
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: white;
+    }
+    
+    .btn-refresh { 
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+    }
+    
+    .btn-trigger { 
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .btn-stop { 
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
+    .btn-toggle { 
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .btn-back:hover { 
+        background: linear-gradient(135deg, #475569 0%, #334155 100%);
+        box-shadow: 0 10px 15px -3px rgba(100, 116, 139, 0.4);
+    }
+    
+    .btn-refresh:hover { 
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-trigger:hover { 
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-stop:hover { 
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
+    }
+    
+    .btn-toggle:hover { 
+        background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.4);
+    }
+
+    /* Compact Statistics Cards */
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+        text-align: center;
+        border: 1px solid rgba(226, 232, 240, 0.3);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 8px;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-card.success .stat-number { color: #10b981; }
+    .stat-card.duration .stat-number { color: #06b6d4; }
+    .stat-card.timestamp .stat-number { color: #6366f1; }
+
+    /* Compact History Section */
+    .history-section {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 16px;
+        border: 1px solid rgba(226, 232, 240, 0.3);
+    }
+    
+    .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.3);
+    }
+    
+    .history-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #2e308e;
+    }
+    
+    /* Compact Filters */
+    .filters {
+        display: flex;
+        gap: 12px;
+        align-items: end;
+        flex-wrap: nowrap;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 120px;
+    }
+    
+    .filter-group label {
+        font-size: 10px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+    
+    .filter-group select {
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2e308e;
+        box-shadow: 0 0 0 2px rgba(46, 48, 142, 0.1);
+    }
+    
+    .filter-group select:hover {
+        border-color: #94a3b8;
+    }
+    
+    /* Compact Table Design */
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        margin-bottom: 20px;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: none;
+    }
+    
+    .history-table th {
+        background: #2e308e;
+        color: white;
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 12px 16px;
+        text-align: left;
+        border: none;
+        position: relative;
+    }
+    
+    .history-table th:first-child {
+        border-top-left-radius: 12px;
+    }
+    
+    .history-table th:last-child {
+        border-top-right-radius: 12px;
+    }
+    
+    .history-table td {
+        padding: 10px 16px;
+        text-align: left;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        color: #334155;
+        font-size: 0.8rem;
+    }
+    
+    .history-table tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .history-table tbody tr:hover {
+        background-color: #f8fafc;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .history-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    /* Premium Status Badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .status-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .status-badge:hover::before {
+        left: 100%;
+    }
+    
+    .status-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+    }
+    
+    .status-running {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+    }
+    
+    .status-failed {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+    }
+    
+    .status-unknown {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(107, 114, 128, 0.3);
+    }
+    
+    /* Job Controls Section */
+    .job-controls {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .controls-container {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .control-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 120px;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .control-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .btn-trigger {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .btn-trigger:hover {
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-enable {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+    }
+    
+    .btn-enable:hover {
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-disable {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .btn-disable:hover {
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+    
+    .btn-stop {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
+    .btn-stop:hover {
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .btn-success:hover {
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .btn-warning:hover {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #6b7280;
+        font-size: 1.1rem;
+    }
+    
+    .error {
+        text-align: center;
+        padding: 40px;
+        color: #dc2626;
+        font-size: 1.1rem;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .pagination-btn {
+        padding: 8px 16px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        color: #374151;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .pagination-btn:hover:not(:disabled) {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+    
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #f9fafb;
+        color: #9ca3af;
+    }
+    
+    .pagination-btn.active {
+        background: #2e308e;
+        color: white;
+        border-color: #2e308e;
+    }
+    
+    .page-info {
+        font-size: 14px;
+        color: #6b7280;
+        font-weight: 500;
+        padding: 8px 12px;
+        background: #f8fafc;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+    }
+    /* Compact View Button */
+    .view-btn {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        background: #2e308e;
+        color: white;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        white-space: nowrap;
+        align-self: end;
+    }
+    
+    .view-btn:hover {
+        background: #1e1f6b;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+    
+    .view-btn:active {
+        transform: translateY(0);
+    }
+    
+    .view-btn.clicked {
+        background: #10b981;
+        color: white;
+    }
+    
+    /* Card-Style Notification Popup */
+    .notification-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        z-index: 10000;
+        width: 380px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 40px 30px 30px;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    .notification-popup.show {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    
+    .notification-popup .icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 24px;
+        color: white;
+    }
+    
+    .notification-popup.success .icon {
+        background: #4285f4;
+    }
+    
+    .notification-popup.error .icon {
+        background: #ea4335;
+    }
+    
+    .notification-popup.warning .icon {
+        background: #fbbc04;
+    }
+
+    .notification-popup.loading .icon {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    .notification-popup.loading .action-btn {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+        50% { box-shadow: 0 0 20px 8px rgba(99, 102, 241, 0.2); }
+    }
+
+    @keyframes spin-smooth {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .notification-popup.loading .icon i {
+        animation: spin-smooth 1.2s linear infinite;
+    }
+
+    .loading-countdown {
+        display: inline-block;
+        font-size: 22px;
+        font-weight: 700;
+        color: #6366f1;
+        min-width: 30px;
+    }
+
+    .loading-progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        margin-top: 16px;
+        overflow: hidden;
+    }
+
+    .loading-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        border-radius: 3px;
+        transition: width 1s linear;
+    }
+    
+    .notification-popup .title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 8px;
+    }
+    
+    .notification-popup .message {
+        font-size: 14px;
+        color: #6b7280;
+        line-height: 1.5;
+        margin-bottom: 25px;
+    }
+    
+    .notification-popup .action-btn {
+        background: #4285f4;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 100px;
+    }
+    
+    .notification-popup.success .action-btn {
+        background: #4285f4;
+    }
+    
+    .notification-popup.error .action-btn {
+        background: #ea4335;
+    }
+    
+    .notification-popup.warning .action-btn {
+        background: #fbbc04;
+        color: #1f2937;
+    }
+    
+    .notification-popup .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .notification-popup .close-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: #9ca3af;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 4px;
+        transition: color 0.2s ease;
+    }
+    
+    .notification-popup .close-btn:hover {
+        color: #6b7280;
+    }
+    
+    /* Overlay background for centered popup */
+    .notification-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+    
+    .notification-overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Filter Styles */
+    .filters {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-group label {
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.875rem;
+        margin-bottom: 0;
+        white-space: nowrap;
+    }
+
+    .filter-group select {
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        background: white;
+        color: #374151;
+        min-width: 120px;
+        transition: all 0.2s ease;
+    }
+
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2e308e;
+        box-shadow: 0 0 0 3px rgba(46, 48, 142, 0.1);
+    }
+
+    .filter-group select:hover {
+        border-color: #9ca3af;
+    }
+    
+.filter-group.custom-date-range {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px !important;
+    margin-bottom: 0 !important;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filter-group.custom-date-range label {
+    margin-bottom: 0;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    min-width: 45px;
+}
+
+.filter-group.custom-date-range .date-input {
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: white;
+    transition: all 0.2s ease;
+    color: #374151;
+}
+
+.filter-group.custom-date-range .date-input:focus {
+    outline: none;
+    border-color: #2e308e;
+    box-shadow: 0 0 0 3px rgba(46, 48, 142, 0.1);
+}
+
+.filter-group.custom-date-range .date-input:hover {
+    border-color: #9ca3af;
+}
+
+/* Inline Custom Date Fields */
+.filter-group.custom-date-inline {
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group.custom-date-inline label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.filter-group.custom-date-inline .date-input {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: white;
+    transition: all 0.2s ease;
+    color: #374151;
+    min-width: 180px;
+}
+
+.filter-group.custom-date-inline .date-input:focus {
+    outline: none;
+    border-color: #2e308e;
+    box-shadow: 0 0 0 3px rgba(46, 48, 142, 0.1);
+}
+
+.filter-group.custom-date-inline .date-input:hover {
+    border-color: #9ca3af;
+}
+
+/* Status Badge Styles */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+}
+
+.status-success {
+    background-color: #10b981;
+    color: white;
+    border-color: #059669;
+}
+
+.status-failed {
+    background-color: #ef4444;
+    color: white;
+    border-color: #dc2626;
+}
+
+.status-running {
+    background-color: #f59e0b;
+    color: white;
+    border-color: #d97706;
+}
+
+.status-unknown {
+    background-color: #6b7280;
+    color: white;
+    border-color: #4b5563;
+}
+
+/* SLA Warning — Running job at 70-99% of SLA */
+.status-sla-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3);
+}
+
+/* SLA Breached — Running job >= 100% of SLA */
+.status-sla-breached {
+    background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+    color: white;
+    box-shadow: 0 4px 12px -1px rgba(234, 88, 12, 0.5);
+    animation: slaPulse 2s ease-in-out infinite;
+}
+
+@keyframes slaPulse {
+    0%, 100% { box-shadow: 0 4px 12px -1px rgba(234, 88, 12, 0.5); }
+    50% { box-shadow: 0 4px 20px 2px rgba(234, 88, 12, 0.7); }
+}
+
+/* Premium SLA chip below the status badge */
+.sla-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.sla-chip-amber {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+.sla-chip-red {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+        /* Premium Chatbot Styles */
+        .chatbot-toggler {
+            position: fixed;
+            bottom: 30px;
+            right: 35px;
+            outline: none;
+            border: none;
+            height: 50px;
+            width: 50px;
+            display: flex;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2e308e 0%, #4f46e5 100%);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(46, 48, 142, 0.4);
+        }
+        
+        .chatbot-toggler:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(46, 48, 142, 0.6);
+        }
+        
+        .chatbot-toggler span {
+            color: #fff;
+            font-size: 1.8rem;
+            transition: all 0.3s ease;
+        }
+        
+        .chatbot-container {
+            position: fixed;
+            bottom: 100px;
+            right: 35px;
+            width: 420px;
+            background: #fff;
+            border-radius: 15px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.5);
+            transform-origin: bottom right;
+            box-shadow: 0 0 128px 0 rgba(0,0,0,0.1), 0 32px 64px -48px rgba(0,0,0,0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+        
+        .show-chatbot .chatbot-container {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+        
+        .chatbot-container .chat-header {
+            padding: 20px;
+            position: relative;
+            text-align: center;
+            color: #fff;
+            background: linear-gradient(135deg, #2e308e 0%, #4f46e5 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chat-header .chat-close-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            display: none;
+            cursor: pointer;
+            transform: translateY(-50%);
+            color: #fff;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        
+        .chat-header .chat-close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-header h2 {
+            font-size: 1.4rem;
+            margin: 0;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .chatbot-container .chat-widget {
+            background: #fff;
+            width: 100%;
+            border-radius: 15px;
+        }
+        
+        .chat-widget .chat-body {
+            height: 310px;
+            overflow-y: auto;
+            padding: 30px 20px 100px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        
+        .chat-body .chat-message {
+            display: flex;
+            margin-bottom: 15px;
+            animation: fadeInUp 0.3s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .chat-body .chat-message.bot .message-content {
+            background: linear-gradient(135deg, #2e308e 0%, #4f46e5 100%);
+            color: white;
+            border-radius: 18px 18px 18px 4px;
+            box-shadow: 0 2px 8px rgba(46, 48, 142, 0.2);
+        }
+        
+        .chat-body .chat-message.user .message-content {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            margin-left: auto;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        }
+        
+        .chat-body .chat-message .message-content {
+            padding: 12px 16px;
+            max-width: 75%;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        .chat-widget .chat-input {
+            display: flex;
+            gap: 8px;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: #fff;
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .chat-input textarea {
+            height: 55px;
+            width: 100%;
+            border: 2px solid #e2e8f0;
+            outline: none;
+            resize: none;
+            max-height: 180px;
+            padding: 15px;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        .chat-input textarea:focus {
+            border-color: #2e308e;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(46, 48, 142, 0.1);
+        }
+        
+        .chat-input span {
+            align-self: flex-end;
+            color: #fff;
+            cursor: pointer;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 55px;
+            font-size: 1.35rem;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2e308e 0%, #4f46e5 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(46, 48, 142, 0.3);
+        }
+        
+        .chat-input span:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(46, 48, 142, 0.4);
+        }
+        
+        .chat-input span:active {
+            transform: scale(0.95);
+        }
+
+
+
+        .chart-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 9999;
+    background: rgba(255,255,255,0.7);
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* MODAL OVERLAY: covers the whole page, centers the modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(30, 41, 59, 0.55); /* semi-transparent dark overlay */
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show {
+  display: flex;
+}
+
+/* MODAL CONTAINER: the actual popup box */
+.modal-container {
+  background: linear-gradient(132deg, #e0e7ff 0%, #f1f5f9 100%);
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.18);
+  width: 400px;
+  max-width: 95vw;
+  padding: 38px 32px 28px;
+  text-align: center;
+  font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: modalFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes modalFadeIn {
+  from { transform: scale(0.96) translateY(20px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* MODAL HEADER */
+.modal-header {
+  background: none;
+  border-bottom: none;
+  padding: 0;
+  margin-bottom: 10px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #312e81;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* MODAL CLOSE BUTTON */
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+.modal-close:hover {
+  color: #1e293b;
+}
+
+/* MODAL BODY */
+.modal-body {
+  padding: 22px 18px 14px;
+  text-align: center;
+  min-height: 90px;
+  width: 100%;
+}
+
+/* ICONS IN MODAL */
+#triggerModalIcon, #toggleModalIcon {
+  font-size: 30px;
+  margin-bottom: 14px;
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+}
+
+/* STATUS TEXT */
+#triggerJobStatusText, #toggleJobStatusText {
+  margin-bottom: 14px;
+  font-size: 1rem;
+  min-height: 28px;
+  color: #312e81;
+  font-weight: 500;
+}
+
+/* ERROR BOX */
+#triggerJobErrorBox, #toggleJobErrorBox {
+  display: none;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: #fde68a;
+  color: #92400e;
+  border-radius: 7px;
+  font-size: 0.97rem;
+  box-shadow: 0 1px 2px rgba(146,64,14,0.07);
+  font-weight: 500;
+}
+
+/* BUTTONS ROW */
+.modal-body > div:last-child {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* BUTTONS */
+.btn, .action-btn, #triggerModalBtn, #toggleModalBtn {
+  background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);
+  color: white;
+  border: none;
+  padding: 13px 24px;
+  border-radius: 9px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 8px;
+  min-width: 105px;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.07);
+}
+.btn-danger {
+  background: linear-gradient(90deg, #f87171 0%, #fbbf24 100%);
+  color: #1e293b;
+}
+.btn-success {
+  background: linear-gradient(90deg, #10b981 0%, #a7f3d0 100%);
+  color: #065f46;
+}
+.action-btn:disabled, #triggerModalBtn:disabled, #toggleModalBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #e0e7ff;
+  color: #9ca3af;
+}
+.action-btn:hover, .btn:hover {
+  box-shadow: 0 4px 18px rgba(59,130,246,0.15);
+  transform: translateY(-2px) scale(1.03);
+}
+.btn-danger:hover {
+  background: linear-gradient(90deg, #fbbf24 0%, #f87171 100%);
+}
+
+/* MODAL SPINNER */
+
+
+/* SUCCESS, ERROR, WARNING ICON COLORS */
+.trigger-success-icon { color: #10b981; }
+.trigger-error-icon { color: #ef4444; }
+.trigger-warning-icon { color: #f59e0b; }
+
+/* RESPONSIVE for small screens */
+@media (max-width: 480px) {
+  .modal-container {
+    width: 95vw;
+    min-width: 0;
+    padding: 16px 8px;
+  }
+  .modal-header h2 { font-size: 1rem; }
+  .btn, .action-btn, #triggerModalBtn, #toggleModalBtn {
+    font-size: 0.95rem;
+    padding: 10px 12px;
+    min-width: 80px;
+  }
+}
+
+
+
+/* MODAL OVERLAY: covers the whole page, centers the modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(30, 41, 59, 0.55); /* semi-transparent dark overlay */
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show {
+  display: flex;
+}
+
+/* MODAL CONTAINER */
+.modal-container {
+  background: linear-gradient(132deg, #e0e7ff 0%, #f1f5f9 100%);
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.18);
+  width: 400px;
+  max-width: 95vw;
+  padding: 38px 32px 28px;
+  text-align: center;
+  font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: modalFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes modalFadeIn {
+  from { transform: scale(0.96) translateY(20px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* MODAL HEADER */
+.modal-header {
+  background: none;
+  border-bottom: none;
+  padding: 14px 20px;
+  margin-bottom: 10px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #312e81;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* MODAL CLOSE BUTTON */
+.modal-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+.modal-close:hover {
+  color: #1e293b;
+}
+
+/* MODAL BODY */
+.modal-body {
+  padding: 22px 18px 14px;
+  text-align: center;
+  min-height: 90px;
+  width: 100%;
+}
+
+/* ICONS IN MODAL */
+#toggleModalIcon {
+  font-size: 30px;
+  margin-bottom: 14px;
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+}
+
+/* STATUS TEXT */
+#toggleJobStatusText {
+  margin-bottom: 14px;
+  font-size: 1rem;
+  min-height: 28px;
+  color: #312e81;
+  font-weight: 500;
+}
+
+/* ERROR BOX */
+#toggleJobErrorBox {
+  display: none;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: #fde68a;
+  color: #92400e;
+  border-radius: 7px;
+  font-size: 0.97rem;
+  box-shadow: 0 1px 2px rgba(146,64,14,0.07);
+  font-weight: 500;
+}
+
+/* BUTTONS ROW */
+.modal-body > div:last-child {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* BUTTONS */
+.btn, #toggleModalBtn {
+  background: linear-gradient(90deg, #6366f1 0%, #06b6d4 100%);
+  color: white;
+  border: none;
+  padding: 13px 24px;
+  border-radius: 9px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 8px;
+  min-width: 105px;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.07);
+}
+.btn-danger {
+  background: linear-gradient(90deg, #f87171 0%, #fbbf24 100%);
+  color: #1e293b;
+}
+.btn-success {
+  background: linear-gradient(90deg, #10b981 0%, #a7f3d0 100%);
+  color: #065f46;
+}
+#toggleModalBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #e0e7ff;
+  color: #9ca3af;
+}
+.btn:hover, #toggleModalBtn:hover {
+  box-shadow: 0 4px 18px rgba(59,130,246,0.15);
+  transform: translateY(-2px) scale(1.03);
+}
+.btn-danger:hover {
+  background: linear-gradient(90deg, #fbbf24 0%, #f87171 100%);
+}
+
+
+
+
+
+/* SUCCESS, ERROR, WARNING ICON COLORS */
+.trigger-success-icon { color: #10b981; }
+.trigger-error-icon { color: #ef4444; }
+.trigger-warning-icon { color: #f59e0b; }
+
+@media (max-width: 480px) {
+  .modal-container {
+    width: 95vw;
+    min-width: 0;
+    padding: 16px 8px;
+  }
+  .modal-header h2 { font-size: 1rem; }
+  .btn, #toggleModalBtn {
+    font-size: 0.95rem;
+    padding: 10px 12px;
+    min-width: 80px;
+  }
+}
+
+
+.loading-spinner {
+  width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.loading-spinner::before,
+.loading-spinner::after,
+.loading-spinner span {
+  content: '';
+  display: block;
+  width: 12px;
+  height: 12px;
+  background: #6366f1;
+  border-radius: 50%;
+  animation: bounce 0.8s infinite alternate;
+}
+.loading-spinner span {
+  background: #10b981;
+  animation-delay: .25s;
+}
+.loading-spinner::after {
+  background: #f59e0b;
+  animation-delay: .5s;
+}
+@keyframes bounce {
+  to { transform: translateY(-16px); opacity: 0.7; }
+}
+
+/* Restrict the Schedule field to one line with ellipsis if too long */
+#jobSchedule {
+    max-width: 320px;
+    word-break: break-all;
+    white-space: normal;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+
+
+.view-btn.log-success {
+    background: #22c55e; /* green */
+    color: #fff;
+}
+.view-btn.log-success:hover {
+    background: #16a34a;
+}
+.view-btn.log-failed {
+    background: #ef4444; /* red */
+    color: #fff;
+}
+.view-btn.log-failed:hover {
+    background: #b91c1c;
+}
+
+
+
+    </style>
+    </head>
+    <body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1 class="job-name"><i class="fas fa-history"></i> Job History - {{ job_id }}</h1>
+        <div class="header-actions">
+            <button class="control-btn btn-back" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button class="control-btn btn-refresh" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    <!-- loading screen -->
+    <div id="pageLoadingOverlay" class="chart-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: rgba(255,255,255,0.7); align-items: center; justify-content: center;">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Job Controls Section -->
+    <div class="job-controls">
+        <div class="controls-container">
+            <button id="triggerJobBtn" class="control-btn btn-trigger"
+        onclick="openTriggerJobModal('{{ job_id }}')"
+        title="Trigger Job - Click to trigger this job">
+        <i class="fas fa-play"></i> Trigger Job
+    </button>
+            <button id="toggleJobBtn" class="control-btn btn-toggle"
+            onclick="openToggleJobModal(jobId)"
+            title="Enable/Disable Job">
+        <i id="toggleJobIcon" class="fas"></i>
+        <span id="toggleJobText"></span>
+    </button>
+    <button id="stopJobBtn" class="control-btn btn-stop"
+    onclick="stopJob('{{ job_id }}')"
+    title="Stop Job - Click to forcefully stop this job">
+    <i class="fas fa-stop"></i> Stop Job
+</button>
+            <!-- COMMENTED OUT - Clear Jobs button not needed now
+            <button class="control-btn btn-warning" onclick="openClearJobsModal()" title="Clear all job runs for this job">
+                <i class="fas fa-eraser"></i> Clear Jobs
+            </button>
+            -->
+<!-- Clear Jobs Modal (Enable/Disable style) -->
+<div id="clearJobsModal" class="modal-overlay">
+    <div class="modal-container" style="width:500px;max-width:99vw;">
+        <div class="modal-header">
+            <h2 style="font-size:1.1rem;margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;word-break:break-word;max-width:98%;">
+                <span id="clearModalIcon" style="font-size:1.3rem;min-width:24px;"><i class='fas fa-eraser' style='color:#f59e0b;'></i></span>
+                <span style="word-break:break-word;max-width:90%;">
+                    Clear Current Execution and Mark as Success: <span id="clearModalJobId" style="color:#6d28d9;font-weight:600;word-break:break-word;">{{ job_id }}</span>
+                </span>
+            </h2>
+            <button class="modal-close" onclick="closeClearJobsModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="clearJobSpinner"><span class="loading-spinner"></span></div>
+            <div id="clearJobStatusText">This will clear the current execution and mark it as success. (Auto-closing in <span id='clearCountdown'>10</span>s)</div>
+            <div id="clearJobErrorBox" style="display:none;margin-top:10px;color:#dc2626;"></div>
+            <div style="display:flex;justify-content:center;gap:14px;margin-top:18px;">
+                <button id="clearModalBtn" class="btn btn-success" onclick="doClearJobsFromModal()">Continue</button>
+                <button class="btn btn-danger" onclick="closeClearJobsModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Clear Jobs Modal Logic (Enable/Disable style)
+let clearModalTimeout = null;
+let clearModalCountdown = null;
+function openClearJobsModal() {
+    // Show modal overlay
+    document.getElementById('clearJobsModal').classList.add('show');
+    document.getElementById('clearModalJobId').textContent = jobId;
+    document.getElementById('clearJobSpinner').innerHTML = '';
+    document.getElementById('clearJobErrorBox').style.display = 'none';
+    document.getElementById('clearModalBtn').disabled = false;
+    let timeLeft = 10;
+    document.getElementById('clearCountdown').textContent = timeLeft;
+    document.getElementById('clearJobStatusText').innerHTML = `This will clear the current execution and mark it as success. (Auto-closing in <span id='clearCountdown'>${timeLeft}</span>s)`;
+    if (clearModalCountdown) clearInterval(clearModalCountdown);
+    if (clearModalTimeout) clearTimeout(clearModalTimeout);
+    clearModalCountdown = setInterval(() => {
+        timeLeft--;
+        document.getElementById('clearCountdown').textContent = timeLeft;
+        if (timeLeft <= 0) {
+            closeClearJobsModal();
+        }
+    }, 1000);
+    clearModalTimeout = setTimeout(() => {
+        closeClearJobsModal();
+    }, 10000);
+}
+function closeClearJobsModal() {
+    document.getElementById('clearJobsModal').classList.remove('show');
+    if (clearModalCountdown) clearInterval(clearModalCountdown);
+    if (clearModalTimeout) clearTimeout(clearModalTimeout);
+}
+function doClearJobsFromModal() {
+    document.getElementById('clearModalBtn').disabled = true;
+    document.getElementById('clearJobSpinner').innerHTML = '<span class="loading-spinner"></span>';
+    document.getElementById('clearJobErrorBox').style.display = 'none';
+    fetch(`/dashboardview/api/clear_job_runs/${jobId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('clearJobSpinner').innerHTML = '';
+            if (data.success) {
+                document.getElementById('clearJobStatusText').textContent = 'Current execution cleared and marked as success!';
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                document.getElementById('clearJobErrorBox').textContent = 'Clear failed: ' + (data.error || 'Unknown error');
+                document.getElementById('clearJobErrorBox').style.display = 'block';
+                document.getElementById('clearModalBtn').disabled = false;
+            }
+        })
+        .catch(() => {
+            document.getElementById('clearJobSpinner').innerHTML = '';
+            document.getElementById('clearJobErrorBox').textContent = 'Clear failed: Network error';
+            document.getElementById('clearJobErrorBox').style.display = 'block';
+            document.getElementById('clearModalBtn').disabled = false;
+        });
+}
+</script>
+        </div>
+    </div>
+
+    
+    <!-- Statistics Cards -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-number" id="totalRuns">-</div>
+            <div class="stat-label">Total Runs</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-number" id="successRate">-</div>
+            <div class="stat-label">Success Rate</div>
+        </div>
+        <div class="stat-card duration">
+            <div class="stat-number" id="lastDuration">-</div>
+            <div class="stat-label">Last Run Duration</div>
+        </div>
+        <div class="stat-card timestamp">
+            <div class="stat-number" id="lastSuccess">-</div>
+                    <div class="stat-label">Last Success</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job Info Sections -->
+    <div class="job-info">
+        <div class="job-info-grid">
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Basic Details</h3>
+                <div class="info-item"><span class="info-label">Job ID:</span><span class="info-value" id="jobId">-</span></div>
+                <div class="info-item"><span class="info-label">Region:</span><span class="info-value" id="jobRegion">-</span></div>
+                <div class="info-item"><span class="info-label">Status:</span><span class="info-value" id="jobStatus">-</span></div>
+                <div class="info-item"><span class="info-label">Last Run:</span><span class="info-value" id="jobLastRun">-</span></div>
+            </div>
+            <div class="info-section">
+                <h3><i class="fas fa-cog"></i> Configuration</h3>
+                <div class="info-item"><span class="info-label">Schedule:</span><span class="info-value" id="jobSchedule">-</span></div>
+                <div class="info-item"><span class="info-label">Next Run:</span><span class="info-value" id="jobNextRun">-</span></div>
+                <div class="info-item"><span class="info-label">SLA:</span><span class="info-value" id="jobSLA">-</span></div>
+                <div class="info-item"><span class="info-label">Email:</span><span class="info-value" id="jobEmail">-</span></div>
+                <div class="info-item"><span class="info-label" hidden>Command:</span><span class="info-value" id="jobCommand" hidden>-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Section with Filters and Pagination -->
+    <div class="history-section">
+        <div class="history-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h2 class="history-title" style="margin: 0;"><i class="fas fa-chart-line"></i> Execution History</h2>
+                <div style="position: relative; display: inline-block;">
+                    <button class="premium-header-btn" id="columnToggleBtn" title="Column Settings" style="display: flex; align-items: center; gap: 6px; font-size: 0.95rem; padding: 4px 12px; background: #f1f5f9; color: #2e308e; border: 2px solid #e2e8f0; border-radius: 4px; height: 32px; min-height: 0;">
+                        <i class="fas fa-columns"></i>
+                        Columns
+                    </button>
+                    <div id="columnDropdown" class="column-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; padding: 12px; min-width: 220px;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="runid" checked> Run ID</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="jobid" checked> Job ID</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="startdate" checked> Start Date</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="enddate" checked> End Date</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="duration" checked> Duration</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="status" checked> Status</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="incident" checked> ServiceNow Incident</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;"><input type="checkbox" class="col-toggle" data-col="logs" checked> Logs</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="slaLegendBar" style="display:none;align-items:center;gap:12px;font-size:0.65rem;font-weight:600;flex-grow:1;justify-content:center;">
+                <span style="display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-arrow-up" style="color:#ea580c;font-size:0.55rem;"></i> <span style="color:#ea580c;">SLA Exceeded</span></span>
+                <span style="color:#e2e8f0;">|</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-arrow-down" style="color:#10b981;font-size:0.55rem;"></i> <span style="color:#10b981;">Within SLA</span></span>
+            </div>
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Status:</label>
+                    <select id="statusFilter">
+                        <option value="all">All Statuses</option>
+                        <option value="success">Success</option>
+                        <option value="failed">Failed</option>
+                        <option value="running">Running</option>
+                        <option value="queued">Queued</option>
+                        <option value="hold">Hold</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Last Runs:</label>
+                    <select id="lastRunsFilter">
+                        <option value="5" selected>Last 5</option>
+                        <option value="10">Last 10</option>
+                        <option value="25">Last 25</option>
+                        <option value="50">Last 50</option>
+                        <option value="100">Last 100</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Time Range:</label>
+                    <select id="timeRangeFilter" onchange="toggleCustomDate()">
+                        <option value="all" selected>All Dates</option>
+                        <option value="1h">Last 1 hour</option>
+                        <option value="6h">Last 6 hours</option>
+                        <option value="1d">Last 1 day</option>
+                        <option value="2d">Last 2 days</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <!-- Inline Custom Date Fields -->
+                <div class="filter-group custom-date-inline" id="customDateInline" style="display:none;">
+                    <label>From:</label>
+                    <input type="datetime-local" class="date-input" id="fromDate">
+                </div>
+                <div class="filter-group custom-date-inline" id="customDateInline2" style="display:none;">
+                    <label>To:</label>
+                    <input type="datetime-local" class="date-input" id="toDate">
+                </div>
+                <button class="view-btn" id="applyFiltersBtn" onclick="applyFilters()">Apply Filters</button>
+            </div>
+        </div>
+        <div id="loading" class="loading" style="display:block;">Loading job history...</div>
+        <div id="error" class="error" style="display:none;"></div>
+        <table class="history-table" id="historyTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th class="col-runid">Run ID</th>
+                    <th class="col-jobid">Job ID</th>
+                    <th class="col-startdate">Start Date</th>
+                    <th class="col-enddate">End Date</th>
+                    <th class="col-duration">Duration</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-logs">Logs</th>
+                    <th class="col-incident">ServiceNow Incident</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <!-- Populated dynamically -->
+            </tbody>
+        </table>
+        <div class="pagination-controls">
+            <button id="prevPage" class="pagination-btn prev-btn" disabled>
+                <i class="fas fa-chevron-left"></i>
+                <span>Previous</span>
+            </button>
+            <div class="page-info">
+                <span id="pageInfo">Showing <span id="pageStart">1</span>-<span id="pageEnd">10</span> of <span id="totalItems">0</span> executions</span>
+            </div>
+            <button id="nextPage" class="pagination-btn next-btn">
+                <span>Next</span>
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for Logs and Trigger Job -->
+<div id="logModal" class="modal">
+    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 800px; margin: 5% auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
+            <div class="modal-title" style="font-size: 1.25rem; font-weight: 600; color: #2e308e; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-file-alt"></i> Job Log
+            </div>
+            <span class="close-modal" onclick="closeLogModal()" style="font-size: 24px; color: #6b7280; cursor: pointer; padding: 5px;">&times;</span>
+        </div>
+        <div class="modal-body" id="logModalContent" style="white-space: pre-wrap; word-break: break-all; background: #f8fafc; padding: 20px; border-radius: 8px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5;"></div>
+        <div style="margin-top: 20px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="closeLogModal()" style="padding: 10px 20px; border-radius: 8px; background: #6b7280; color: white; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">Close</button>
+            <button onclick="copyLogToClipboard()" style="padding: 10px 20px; border-radius: 8px; background: #2e308e; color: white; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">Copy</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stop Job Modal -->
+<div id="stopJobModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px; margin: 10% auto; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+        <!-- Modal Header -->
+        <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3730a3 50%, #581c87 100%); color: white; padding: 20px; text-align: center;">
+            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 600;">
+                <i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #fbbf24;"></i>
+                Stop Job Process
+            </h3>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="modal-body" style="padding: 24px;">
+            <div id="stopJobContent">
+                <!-- Job Status Information -->
+                <div class="job-info" style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: 600; color: #1e293b;">Job ID:</span>
+                        <span id="stopJobId" style="color: #64748b; font-family: monospace;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: 600; color: #1e293b;">Status:</span>
+                        <span id="stopJobStatus" style="color: #64748b;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-weight: 600; color: #1e293b;">Server:</span>
+                        <span id="stopJobServer" style="color: #64748b; font-family: monospace;">-</span>
+                    </div>
+                </div>
+                
+                <!-- Warning Message -->
+                <div class="warning-message" style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <i class="fas fa-exclamation-triangle" style="color: #d97706; margin-right: 8px;"></i>
+                        <span style="font-weight: 600; color: #92400e;">Warning</span>
+                    </div>
+                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.4;">
+                        This will forcefully terminate the running job process. This action cannot be undone.
+                    </p>
+                </div>
+                
+                <!-- Result Display -->
+                <div id="stopJobResult" style="display: none; margin-bottom: 20px;"></div>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="modal-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #e2e8f0;">
+            <button id="cancelStopJob" class="btn" style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">
+                Cancel
+            </button>
+            <button id="confirmStopJob" class="btn btn-danger" style="padding: 8px 16px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">
+                <span>Stop Process</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Session timeout - simple version
+    (function() {
+        const originalFetch = window.fetch;
+        let redirecting = false;
+        
+        window.fetch = function() {
+            return originalFetch.apply(this, arguments).then(function(response) {
+                if (redirecting) return response;
+                
+                // Check 401/403
+                if (response.status === 401 || response.status === 403) {
+                    redirecting = true;
+                    console.warn('Session expired - redirecting');
+                    setTimeout(function() { window.location.href = '/login'; }, 500);
+                    return response;
+                }
+                
+                // Check for HTML (session expired returns HTML login page)
+                // Only redirect if it's NOT a server error (500) — those should be
+                // handled by the caller's .catch() block, not treated as session expiry
+                const ct = response.headers.get('content-type') || '';
+                if (ct.indexOf('text/html') > -1 && response.url.indexOf('/api/') > -1 && response.status < 500) {
+                    // API endpoint returned HTML with non-500 status - session expired
+                    redirecting = true;
+                    console.warn('Session expired (HTML) - redirecting');
+                    setTimeout(function() { window.location.href = '/login'; }, 500);
+                }
+                
+                return response;
+            });
+        };
+    })();
+
+    const jobId = '{{ job_id }}';
+    let allRuns = [];
+    let filteredRuns = [];
+    let currentJobType = ''; // Store job_type for conditional button display
+    let jobSLAMinutes = null; // SLA in minutes from job_details table
+    // Place this in your <script> section (replace your existing displayResults and modal logic)
+
+// Add these at the top if not already present
+let currentPage = 1;
+const entriesPerPage = 5;
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+}
+function showLogModal(logText) {
+    document.getElementById('logModalContent').innerText = logText;
+    document.getElementById('logModal').style.display = 'block';
+}
+function closeLogModal() {
+    document.getElementById('logModal').style.display = 'none';
+}
+
+// Lazy-load log from API when "View Logs" button is clicked
+function loadAndShowLogModal(jobId, runId) {
+    // Show loading state
+    document.getElementById('logModalContent').innerText = 'Loading logs...';
+    document.getElementById('logModal').style.display = 'block';
+    
+    // Fetch log from API endpoint
+    fetch(`/dashboardview/api/job_execution_log/${encodeURIComponent(jobId)}/${encodeURIComponent(runId)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.message) {
+                document.getElementById('logModalContent').innerText = data.message;
+            } else {
+                document.getElementById('logModalContent').innerText = 'No logs available for this execution.';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching logs:', error);
+            document.getElementById('logModalContent').innerText = `Error loading logs: ${error.message}`;
+        });
+}
+
+function copyLogToClipboard() {
+    const logText = document.getElementById('logModalContent').innerText;
+    const btn = event.target; // The button that was clicked
+    navigator.clipboard.writeText(logText).then(() => {
+        btn.textContent = "Copied!";
+        btn.disabled = true;
+        btn.style.background = "#22c55e"; // Optional: green color for success
+        // Optionally, re-enable after 2s and restore text
+        setTimeout(() => {
+            btn.textContent = "Copy";
+            btn.disabled = false;
+            btn.style.background = "#4f46e5";
+        }, 1800);
+    });
+}
+
+// Control button visibility based on job_type (hide for Peoplesoft Monitor jobs)
+function updateJobControlsVisibility() {
+    const isPeoplesoftMonitor = currentJobType && currentJobType.includes('Peoplesoft Monitor');
+    const isSQLJob = currentJobType && currentJobType.toLowerCase().includes('sql job');
+    const triggerBtn = document.getElementById('triggerJobBtn');
+    const toggleBtn = document.getElementById('toggleJobBtn');
+    const stopBtn = document.getElementById('stopJobBtn');
+    
+    if (isPeoplesoftMonitor) {
+        // Hide all action buttons for Peoplesoft Monitor jobs
+        if (triggerBtn) triggerBtn.style.display = 'none';
+        if (toggleBtn) toggleBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+    } else if (isSQLJob) {
+        // For SQL Jobs, show Trigger and Toggle but hide Stop
+        if (triggerBtn) triggerBtn.style.display = 'inline-block';
+        if (toggleBtn) toggleBtn.style.display = 'inline-block';
+        if (stopBtn) stopBtn.style.display = 'none';
+    } else {
+        // Show all action buttons for other job types
+        if (triggerBtn) triggerBtn.style.display = 'inline-block';
+        if (toggleBtn) toggleBtn.style.display = 'inline-block';
+        if (stopBtn) stopBtn.style.display = 'inline-block';
+    }
+}
+
+function displayResults() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+
+    if (filteredRuns.length === 0) {
+        document.getElementById('historyTable').style.display = 'none';
+        showError('No execution history found for this job.');
+        return;
+    }
+
+    document.getElementById('historyTable').style.display = 'table';
+    const tbody = document.getElementById('historyTableBody');
+    tbody.innerHTML = '';
+
+    // Apply Last Runs filter to determine the dataset for pagination
+    const lastRunsFilter = document.getElementById('lastRunsFilter').value;
+    let datasetForPagination = filteredRuns;
+    if (lastRunsFilter !== 'all') {
+        datasetForPagination = filteredRuns.slice(0, parseInt(lastRunsFilter));
+    }
+
+    // PAGINATION - Always show 5 records per page
+    const recordsPerPage = 5;
+    const totalPages = Math.ceil(datasetForPagination.length / recordsPerPage);
+    const startIdx = (currentPage - 1) * recordsPerPage;
+    const endIdx = Math.min(startIdx + recordsPerPage, datasetForPagination.length);
+    const pageRuns = datasetForPagination.slice(startIdx, endIdx);
+
+    pageRuns.forEach(run => {
+        const startDate = run.start_date ? formatISTDate(run.start_date) : 'N/A';
+        const endDate = run.end_date ? formatISTDate(run.end_date) : 'N/A';
+        
+        // DEBUG: Log each row's duration calculation
+        console.log('=== ROW DURATION DEBUG ===');
+        console.log('Run ID:', run.run_id);
+        console.log('Status:', run.status);
+        console.log('Duration Seconds:', run.duration_seconds);
+        console.log('Start Date:', run.start_date);
+        console.log('End Date:', run.end_date);
+        
+        // Use the pre-formatted duration from backend, or calculate it if backend hasn't been restarted
+        let duration = 'N/A';
+        if (run.execution_time && run.execution_time !== 'N/A' && !run.execution_time.includes('IST')) {
+            // Backend is working correctly - use pre-formatted duration
+            duration = run.execution_time;
+        } else if (run.duration_seconds && run.duration_seconds > 0) {
+            // Backend not restarted yet - calculate duration from seconds
+            console.log('ROW DEBUG - Run:', run.run_id, 'Status:', run.status, 'Duration_seconds:', run.duration_seconds);
+            duration = formatDuration(run.duration_seconds);
+        } else if (run.start_date && run.end_date) {
+            // Fallback: calculate duration from dates
+            const startTime = new Date(run.start_date.replace(' IST', ''));
+            const endTime = new Date(run.end_date.replace(' IST', ''));
+            if (!isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) {
+                const diffSeconds = Math.floor((endTime - startTime) / 1000);
+                duration = formatDuration(diffSeconds);
+            }
+        }
+        
+        const status = run.status || 'NA';
+        let statusClass = getStatusClass(status);
+
+        // SLA-aware status badge for RUNNING jobs
+        let statusBadgeHtml = '';
+        const isRunning = status.toLowerCase().includes('running');
+        // Use duration_seconds from backend, or calculate from dates
+        let durationSecs = run.duration_seconds || 0;
+        if (durationSecs <= 0 && run.start_date) {
+            const startStr = run.start_date.replace(' IST', '');
+            const startMs = new Date(startStr).getTime();
+            if (!isNaN(startMs)) {
+                if (isRunning) {
+                    // Running: compare to now
+                    durationSecs = Math.floor((Date.now() - startMs) / 1000);
+                } else if (run.end_date) {
+                    // Completed: compare to end_date
+                    const endStr = run.end_date.replace(' IST', '');
+                    const endMs = new Date(endStr).getTime();
+                    if (!isNaN(endMs)) {
+                        durationSecs = Math.floor((endMs - startMs) / 1000);
+                    }
+                }
+                if (durationSecs < 0) durationSecs = 0;
+            }
+        }
+
+        // Always use default badge (Running stays blue)
+        statusBadgeHtml = `<span class="status-badge ${statusClass}">${status}</span>`;
+
+        // Build duration HTML with SLA arrows (Exceeded / Within SLA only)
+        let durationHtml = duration;
+        if (jobSLAMinutes && jobSLAMinutes > 0 && durationSecs > 0) {
+            const slaSecsLocal = jobSLAMinutes * 60;
+            if (durationSecs >= slaSecsLocal) {
+                // SLA exceeded — red bold text + red up arrow
+                durationHtml = `<span style="color:#ea580c;font-weight:700;">${duration}</span> <i class="fas fa-arrow-up" style="color:#ea580c;font-size:0.7rem;" title="Exceeded SLA limit of ${jobSLAMinutes}m"></i>`;
+            } else {
+                // Within SLA — normal text + green down arrow
+                durationHtml = `${duration} <i class="fas fa-arrow-down" style="color:#10b981;font-size:0.7rem;" title="Within SLA limit of ${jobSLAMinutes}m"></i>`;
+            }
+        }
+
+        // View Logs button - use has_message flag (no actual message content yet)
+        let logButton = '-';
+        
+        // Only show button if has_message flag is true (lazy-load actual log on click)
+        if (run.has_message) {
+            console.log(`✅ has_message=true for run ${run.run_id}, showing View Logs button`);
+            let logBtnClass = "view-btn";
+            if (run.status && run.status.toLowerCase().includes("success")) {
+                logBtnClass += " log-success";
+            } else if (run.status && run.status.toLowerCase().includes("fail")) {
+                logBtnClass += " log-failed";
+            }
+            // Pass job_id and run_id to fetch log on demand
+            logButton = `<button class="${logBtnClass}" onclick="loadAndShowLogModal('${run.job_id}', '${run.run_id}')">View Logs</button>`;
+        } else {
+            console.log(`❌ has_message=false for run ${run.run_id}, not showing View Logs button`);
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="col-runid">${run.run_id || '-'}</td>
+            <td class="col-jobid">${run.job_id || '-'}</td>
+            <td class="col-startdate">${startDate}</td>
+            <td class="col-enddate">${endDate}</td>
+            <td class="col-duration">${durationHtml}</td>
+            <td class="col-status">${statusBadgeHtml}</td>
+            <td class="col-logs" style="text-align:center;">${logButton}</td>
+            <td class="col-incident">${run.servicenow_incident || '-'}</td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Update pagination controls
+    document.getElementById('pageInfo').textContent = `Showing ${startIdx + 1}-${endIdx} of ${datasetForPagination.length} executions`;
+    document.getElementById('prevPage').disabled = (currentPage === 1);
+    document.getElementById('nextPage').disabled = (currentPage === totalPages || totalPages === 0);
+    
+    // Apply saved column visibility preferences after table is populated
+    applyColumnVisibility();
+}
+
+// Pagination event handlers
+function setupPagination() {
+    document.getElementById('prevPage').onclick = function() {
+        if (currentPage > 1) {
+            currentPage--;
+            displayResults();
+        }
+    };
+    
+    document.getElementById('nextPage').onclick = function() {
+        // Calculate total pages based on current filter settings
+        const lastRunsFilter = document.getElementById('lastRunsFilter').value;
+        let datasetForPagination = filteredRuns;
+        if (lastRunsFilter !== 'all') {
+            datasetForPagination = filteredRuns.slice(0, parseInt(lastRunsFilter));
+        }
+        const recordsPerPage = 5;
+        const totalPages = Math.ceil(datasetForPagination.length / recordsPerPage);
+        
+        if (currentPage < totalPages) {
+            currentPage++;
+            displayResults();
+        }
+    };
+}
+
+// Apply saved column visibility from localStorage
+function applyColumnVisibility() {
+    document.querySelectorAll('.col-toggle').forEach(function(checkbox) {
+        const colClass = 'col-' + checkbox.getAttribute('data-col');
+        const savedState = localStorage.getItem('columnVisible_' + colClass);
+        
+        // If saved state is false, hide the column
+        if (savedState === 'false') {
+            checkbox.checked = false;
+            document.querySelectorAll('.' + colClass).forEach(function(cell) {
+                cell.style.display = 'none';
+            });
+        } else {
+            // Default: show column
+            checkbox.checked = true;
+            document.querySelectorAll('.' + colClass).forEach(function(cell) {
+                cell.style.display = '';
+            });
+        }
+    });
+}
+
+// Column Visibility Toggle Setup
+function setupColumnToggle() {
+    // Setup checkbox change event listeners
+    document.querySelectorAll('.col-toggle').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const colClass = 'col-' + this.getAttribute('data-col');
+            const isChecked = this.checked;
+            
+            // Toggle visibility for all cells with this class
+            document.querySelectorAll('.' + colClass).forEach(function(cell) {
+                cell.style.display = isChecked ? '' : 'none';
+            });
+            
+            // Save preference to localStorage
+            localStorage.setItem('columnVisible_' + colClass, isChecked);
+            console.log('Column ' + colClass + ' visibility: ' + (isChecked ? 'visible' : 'hidden'));
+        });
+    });
+    
+    // Setup dropdown toggle for column visibility
+    const columnToggleBtn = document.getElementById('columnToggleBtn');
+    const columnDropdown = document.getElementById('columnDropdown');
+    
+    if (columnToggleBtn && columnDropdown) {
+        columnToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            columnDropdown.style.display = columnDropdown.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#columnToggleBtn') && !e.target.closest('#columnDropdown')) {
+                columnDropdown.style.display = 'none';
+            }
+        });
+    }
+}
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Job History Page Loaded - Job ID:', jobId);
+        setupPagination();
+        loadJobData();
+        
+        // Setup column visibility toggle
+        setupColumnToggle();
+    });
+
+
+
+    let isJobActive = false; // Will set this from API
+
+// function triggerJob(jobId) {
+//     if (confirm(`Are you sure you want to trigger job ${jobId}?`)) {
+//         fetch(`/dashboardview/api/trigger_job/${jobId}`, { method: 'POST' })
+//             .then(res => res.json())
+//             .then(data => {
+//                 alert(data.success ? 'Job triggered!' : 'Trigger failed: ' + (data.error || 'Unknown error'));
+//                 refreshData();
+//             });
+//     }
+// }
+
+let triggerModalTimeout = null;
+let triggerModalCountdown = null;
+
+// Modal open/close logic
+function openTriggerJobModal(jobId) {
+    // Clear any existing timeout
+    if (triggerModalTimeout) {
+        clearTimeout(triggerModalTimeout);
+        triggerModalTimeout = null;
+    }
+    if (triggerModalCountdown) {
+        clearInterval(triggerModalCountdown);
+        triggerModalCountdown = null;
+    }
+    
+    // Show modal as overlay
+    const modal = document.getElementById('triggerJobModal');
+    modal.classList.add('show'); // Use show class for overlay
+
+    // Reset modal content
+    document.getElementById('triggerModalJobId').textContent = jobId;
+    document.getElementById('triggerJobSpinner').innerHTML = '<span class="loading-spinner"></span>';
+    document.getElementById('triggerJobStatusText').textContent = 'Checking job status...';
+    document.getElementById('triggerJobErrorBox').style.display = 'none';
+    document.getElementById('triggerModalIcon').innerHTML = '';
+    document.getElementById('triggerModalBtn').disabled = true;
+
+    // Save the jobId for later use in trigger
+    window.pendingTriggerJobId = jobId;
+
+    // Fetch job status
+    fetch(`/dashboardview/api/job_status/${encodeURIComponent(jobId)}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('triggerJobSpinner').innerHTML = '';
+            if (data.is_paused || data.status === 'disabled') {
+                document.getElementById('triggerModalIcon').innerHTML = '<i class="fas fa-ban trigger-error-icon"></i>';
+                document.getElementById('triggerJobStatusText').textContent = 'Job is disabled. Enable it to trigger.';
+                document.getElementById('triggerModalBtn').disabled = true;
+            } else if (data.is_running || data.status === 'running') {
+                document.getElementById('triggerModalIcon').innerHTML = '<i class="fas fa-spinner trigger-warning-icon"></i>';
+                document.getElementById('triggerJobStatusText').textContent = 'Job is already running. Please wait for it to finish.';
+                document.getElementById('triggerModalBtn').disabled = true;
+            } else {
+                document.getElementById('triggerModalIcon').innerHTML = '<i class="fas fa-check-circle trigger-success-icon"></i>';
+                document.getElementById('triggerModalBtn').disabled = false;
+                
+                // Start 10-second countdown
+                let timeLeft = 10;
+                document.getElementById('triggerJobStatusText').textContent = `Ready to trigger! (Auto-closing in ${timeLeft}s)`;
+                
+                triggerModalCountdown = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft > 0) {
+                        document.getElementById('triggerJobStatusText').textContent = `Ready to trigger! (Auto-closing in ${timeLeft}s)`;
+                    }
+                }, 1000);
+                
+                triggerModalTimeout = setTimeout(() => {
+                    closeTriggerJobModal();
+                }, 10000);
+            }
+        })
+        .catch(err => {
+            document.getElementById('triggerJobSpinner').innerHTML = '';
+            document.getElementById('triggerModalIcon').innerHTML = '<i class="fas fa-exclamation-triangle trigger-error-icon"></i>';
+            document.getElementById('triggerJobStatusText').textContent = 'Failed to check job status.';
+            document.getElementById('triggerJobErrorBox').textContent = 'Network error while checking job status.';
+            document.getElementById('triggerJobErrorBox').style.display = 'block';
+            document.getElementById('triggerModalBtn').disabled = true;
+        });
+}
+
+// Actually trigger the job via API
+function doTriggerJobFromModal() {
+    const jobId = window.pendingTriggerJobId;
+    if (!jobId) return;
+
+    // Clear countdown when user clicks Trigger
+    if (triggerModalTimeout) {
+        clearTimeout(triggerModalTimeout);
+        triggerModalTimeout = null;
+    }
+    if (triggerModalCountdown) {
+        clearInterval(triggerModalCountdown);
+        triggerModalCountdown = null;
+    }
+
+    document.getElementById('triggerJobStatusText').textContent = 'Triggering job...';
+    document.getElementById('triggerModalBtn').disabled = true;
+
+    // Get CSRF token (from meta tag or cookie)
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        document.getElementById('triggerJobStatusText').textContent = 'CSRF token missing. Please refresh the page.';
+        return;
+    }
+
+    fetch(`/dashboardview/api/trigger_job/${encodeURIComponent(jobId)}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('triggerJobStatusText').textContent = data.message || 'Job triggered successfully!';
+            setTimeout(closeTriggerJobModal, 1000);
+            // Optionally refresh job data here
+            if (typeof loadJobData === 'function') loadJobData();
+        } else if (data.status === 'disabled') {
+            document.getElementById('triggerJobStatusText').textContent = data.message || 'Job is disabled. Enable it to trigger.';
+        } else if (data.status === 'running') {
+            document.getElementById('triggerJobStatusText').textContent = data.message || 'Job is already running. Please wait for it to finish.';
+        } else {
+            document.getElementById('triggerJobStatusText').textContent = data.error || data.message || 'Failed to trigger job.';
+        }
+    })
+    .catch(err => {
+        document.getElementById('triggerJobStatusText').textContent = 'Network or CSRF error while triggering job.';
+    });
+}
+
+// Modal close logic
+function closeTriggerJobModal() {
+    // Clear any active timeout and countdown
+    if (triggerModalTimeout) {
+        clearTimeout(triggerModalTimeout);
+        triggerModalTimeout = null;
+    }
+    if (triggerModalCountdown) {
+        clearInterval(triggerModalCountdown);
+        triggerModalCountdown = null;
+    }
+    
+    const modal = document.getElementById('triggerJobModal');
+    modal.classList.remove('show');
+    window.pendingTriggerJobId = null;
+}
+
+// Helper to get CSRF token
+function getCSRFToken() {
+    // Try meta tag first
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) return meta.getAttribute('content');
+    // Fallback to cookie
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrf_token' || name === '_csrf_token') return decodeURIComponent(value);
+    }
+    return null;
+}
+
+
+
+
+
+
+// Store jobId for modal actions
+let pendingToggleJobId = null;
+let pendingToggleAction = null; // "enable" or "disable"
+let toggleModalTimeout = null;
+let toggleModalCountdown = null;
+
+// Open the Enable/Disable Job Modal
+function openToggleJobModal(jobId) {
+    // Clear any existing timeout
+    if (toggleModalTimeout) {
+        clearTimeout(toggleModalTimeout);
+        toggleModalTimeout = null;
+    }
+    if (toggleModalCountdown) {
+        clearInterval(toggleModalCountdown);
+        toggleModalCountdown = null;
+    }
+    
+    pendingToggleJobId = jobId;
+
+    // Show modal overlay
+    const modal = document.getElementById('toggleJobModal');
+    modal.classList.add('show');
+
+    // Reset modal content
+    document.getElementById('toggleModalJobId').textContent = jobId;
+    document.getElementById('toggleJobSpinner').innerHTML = '<span class="loading-spinner"></span>';
+    document.getElementById('toggleJobStatusText').textContent = 'Checking job status...';
+    document.getElementById('toggleJobErrorBox').style.display = 'none';
+    document.getElementById('toggleModalIcon').innerHTML = '';
+    document.getElementById('toggleModalBtn').disabled = true;
+
+    // Fetch job status
+    fetch(`/dashboardview/api/job_status/${encodeURIComponent(jobId)}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('toggleJobSpinner').innerHTML = '';
+            document.getElementById('toggleJobErrorBox').style.display = 'none';
+
+            if (data.is_paused || data.status === 'disabled') {
+                // Job is disabled, so action is ENABLE
+                pendingToggleAction = "enable";
+                document.getElementById('toggleModalIcon').innerHTML = '<i class="fas fa-play-circle trigger-success-icon"></i>';
+                document.getElementById('toggleActionText').textContent = 'Enable';
+                document.getElementById('toggleModalBtn').disabled = false;
+                
+                // Start 10-second countdown
+                let timeLeft = 10;
+                document.getElementById('toggleJobStatusText').textContent = `Job is currently disabled. You can enable it. (Auto-closing in ${timeLeft}s)`;
+                
+                toggleModalCountdown = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft > 0) {
+                        document.getElementById('toggleJobStatusText').textContent = `Job is currently disabled. You can enable it. (Auto-closing in ${timeLeft}s)`;
+                    }
+                }, 1000);
+                
+                toggleModalTimeout = setTimeout(() => {
+                    closeToggleJobModal();
+                }, 10000);
+            } else if (data.is_running || data.status === 'running') {
+                // Can't enable/disable while running
+                pendingToggleAction = null;
+                document.getElementById('toggleModalIcon').innerHTML = '<i class="fas fa-spinner trigger-warning-icon"></i>';
+                document.getElementById('toggleActionText').textContent = '';
+                document.getElementById('toggleJobStatusText').textContent = 'Job is currently running. Please wait for it to finish.';
+                document.getElementById('toggleModalBtn').disabled = true;
+            } else {
+                // Job is enabled, so action is DISABLE
+                pendingToggleAction = "disable";
+                document.getElementById('toggleModalIcon').innerHTML = '<i class="fas fa-pause-circle trigger-warning-icon"></i>';
+                document.getElementById('toggleActionText').textContent = 'Disable';
+                document.getElementById('toggleModalBtn').disabled = false;
+                
+                // Start 10-second countdown
+                let timeLeft = 10;
+                document.getElementById('toggleJobStatusText').textContent = `Job is currently enabled. You can disable it. (Auto-closing in ${timeLeft}s)`;
+                
+                toggleModalCountdown = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft > 0) {
+                        document.getElementById('toggleJobStatusText').textContent = `Job is currently enabled. You can disable it. (Auto-closing in ${timeLeft}s)`;
+                    }
+                }, 1000);
+                
+                toggleModalTimeout = setTimeout(() => {
+                    closeToggleJobModal();
+                }, 10000);
+                document.getElementById('toggleModalBtn').disabled = false;
+            }
+        })
+        .catch(err => {
+            document.getElementById('toggleJobSpinner').innerHTML = '';
+            document.getElementById('toggleModalIcon').innerHTML = '<i class="fas fa-exclamation-triangle trigger-error-icon"></i>';
+            document.getElementById('toggleJobStatusText').textContent = 'Failed to check job status.';
+            document.getElementById('toggleJobErrorBox').textContent = 'Network error while checking job status.';
+            document.getElementById('toggleJobErrorBox').style.display = 'block';
+            document.getElementById('toggleModalBtn').disabled = true;
+        });
+}
+
+// Actually enable/disable the job via API
+function doToggleJobFromModal() {
+    const jobId = pendingToggleJobId;
+    const action = pendingToggleAction;
+    if (!jobId || !action) return;
+    
+    // Clear countdown when user clicks Enable/Disable
+    if (toggleModalTimeout) {
+        clearTimeout(toggleModalTimeout);
+        toggleModalTimeout = null;
+    }
+    if (toggleModalCountdown) {
+        clearInterval(toggleModalCountdown);
+        toggleModalCountdown = null;
+    }
+    
+    const csrfToken = getCSRFToken();
+    document.getElementById('toggleJobStatusText').textContent = (action === "enable" ? 'Enabling job...' : 'Disabling job...');
+    document.getElementById('toggleModalBtn').disabled = true;
+
+    fetch('/dashboardview/api/toggle_job_status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ job_id: jobId, enable: (action === "enable") })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message in modal based on action
+            document.getElementById('toggleJobStatusText').textContent =
+                (action === 'enable')
+                    ? 'Job has been enabled!'
+                    : 'Job has been disabled!';
+            setTimeout(function() {
+                closeToggleJobModal();
+                loadJobStatus();
+                if (typeof loadJobData === 'function') loadJobData();
+            }, 1200);
+        } else if (data.status === 'running') {
+            document.getElementById('toggleJobStatusText').textContent = data.message || 'Job is currently running. Please wait for it to finish.';
+        } else {
+            document.getElementById('toggleJobStatusText').textContent = data.error || data.message || `Failed to ${action} job.`;
+        }
+    })
+    .catch(err => {
+        document.getElementById('toggleJobStatusText').textContent = 'Network or CSRF error while toggling job status.';
+    });
+}
+
+// Modal close logic
+function closeToggleJobModal() {
+    // Clear any active timeout and countdown
+    if (toggleModalTimeout) {
+        clearTimeout(toggleModalTimeout);
+        toggleModalTimeout = null;
+    }
+    if (toggleModalCountdown) {
+        clearInterval(toggleModalCountdown);
+        toggleModalCountdown = null;
+    }
+    
+    const modal = document.getElementById('toggleJobModal');
+    modal.classList.remove('show');
+    pendingToggleJobId = null;
+    pendingToggleAction = null;
+}
+
+// Helper to get CSRF token
+function getCSRFToken() {
+    // Try meta tag first
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) return meta.getAttribute('content');
+    // Fallback to cookie
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrf_token' || name === '_csrf_token') return decodeURIComponent(value);
+    }
+    return null;
+}
+
+
+
+
+
+function stopJob(jobId) {
+    if (confirm(`Are you sure you want to stop job ${jobId}?`)) {
+        fetch(`/dashboardview/api/stop_job/${jobId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.success ? 'Job stopped!' : 'Stop failed: ' + (data.error || 'Unknown error'));
+                refreshData();
+            });
+    }
+}
+
+function toggleJobActive(jobId) {
+    const action = isJobActive ? 'disable' : 'enable';
+    if (confirm(`Are you sure you want to ${action} job ${jobId}?`)) {
+        fetch(`/dashboardview/api/toggle_job/${jobId}`, {
+            method: 'POST',
+            body: JSON.stringify({ enable: !isJobActive }),
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                isJobActive = !isJobActive;
+                document.getElementById('toggleJobText').textContent = isJobActive ? 'Disable' : 'Enable';
+                alert(`Job ${action}d!`);
+                refreshData();
+            } else {
+                alert('Update failed: ' + (data.error || 'Unknown error'));
+            }
+        });
+    }
+}
+
+    // function loadJobData() {
+    //     fetch(`/dashboardview/api/job_history/${encodeURIComponent(jobId)}`)
+    //         .then(response => response.json())
+    //         .then(data => {
+    //             console.log('Job History API Response:', data);
+    //             if (data.error) {
+    //                 throw new Error(data.error);
+    //             }
+    //             allRuns = data.runs || [];
+    //             updateStatistics();
+    //             applyFilters();
+    //         })
+    //         .catch(error => {
+    //             console.error('Error loading job history:', error);
+    //             showError(error.message || 'Failed to load job history');
+    //         });
+    // }
+    // Replace your current loadJobData and related logic with this
+
+    function loadJobData() {
+        // Set default filter values on initial page load
+        document.getElementById('lastRunsFilter').value = "5";
+document.getElementById('timeRangeFilter').value = "all"; // Or leave blank if you want no default
+    fetch(`/dashboardview/api/job_history/${encodeURIComponent(jobId)}?_t=${Date.now()}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Job History API Data:', data);
+            
+            // Store job_type for conditional button display
+            currentJobType = data.job_type || '';
+            
+            // DEBUG: Show first running job details from backend
+            if (data.runs && data.runs.length > 0) {
+                const firstRun = data.runs[0];
+                console.log('=== FIRST RUN FROM BACKEND ===');
+                console.log('Run ID:', firstRun.run_id);
+                console.log('Status:', firstRun.status);
+                console.log('Duration Seconds (from backend):', firstRun.duration_seconds);
+                console.log('Start Date (from backend):', firstRun.start_date);
+                console.log('End Date (from backend):', firstRun.end_date);
+                
+                // Find first running job
+                const runningJob = data.runs.find(r => r.status && r.status.toLowerCase() === 'running');
+                if (runningJob) {
+                    console.log('=== RUNNING JOB FROM BACKEND ===');
+                    console.log('Running Job ID:', runningJob.run_id);
+                    console.log('Running Status:', runningJob.status);
+                    console.log('Running Duration Seconds:', runningJob.duration_seconds);
+                    console.log('Running Start Date:', runningJob.start_date);
+                    console.log('Running End Date:', runningJob.end_date);
+                }
+            }
+            
+            // --- POPULATE JOB DETAILS SECTION ---
+            document.getElementById('jobId').textContent         = data.job_id     || '-';
+            document.getElementById('jobRegion').textContent     = data.region     || '-';
+            document.getElementById('jobStatus').textContent     = data.is_active ? 'ACTIVE' : 'INACTIVE';
+            document.getElementById('jobLastRun').textContent    = data.last_execution_time ? formatISTDate(data.last_execution_time) : '-';
+            // Use readable cron format if available, otherwise fall back to raw cron expression
+            const scheduleText = data.cron_readable || data.cron_expression || '-';
+            document.getElementById('jobSchedule').textContent = scheduleText;
+            
+            // Add title attribute to show raw cron expression if readable format is used
+            const scheduleElement = document.getElementById('jobSchedule');
+            if (data.cron_readable && data.cron_expression && data.cron_readable !== data.cron_expression) {
+                scheduleElement.title = `Raw cron: ${data.cron_expression}`;
+                scheduleElement.style.cursor = 'help';
+            } else {
+                scheduleElement.title = '';
+                scheduleElement.style.cursor = 'default';
+            }
+            document.getElementById('jobNextRun').textContent    = data.next_run_time || '-';
+            document.getElementById('jobEmail').textContent      = data.mail_list  || '-';
+            // Store SLA globally for status badge rendering
+            jobSLAMinutes = data.sla ? parseInt(data.sla) : null;
+            document.getElementById('jobCommand').textContent    = data.command    || '-';
+
+            // SLA display — simple, no breach message
+            const slaEl = document.getElementById('jobSLA');
+            slaEl.textContent = jobSLAMinutes ? `${jobSLAMinutes} Minutes` : 'NA';
+
+            // Show/hide SLA legend bar
+            const legendBar = document.getElementById('slaLegendBar');
+            if (legendBar) {
+                if (jobSLAMinutes && jobSLAMinutes > 0) {
+                    legendBar.style.display = 'flex';
+                } else {
+                    legendBar.style.display = 'none';
+                }
+            }
+
+            // --- STATISTICS ---
+            allRuns = data.runs || [];
+            updateStatistics();
+            updateJobControlsVisibility(); // Control button visibility based on job_type
+            applyFilters();
+            hidePageSpinner();
+        })
+        .catch(error => {
+    console.error('API error:', error);
+    // Show raw data if available
+    if (error.response) {
+        error.response.json().then(data => console.log('API error data:', data));
+    }
+    document.getElementById('jobId').textContent      = 'Error';
+    document.getElementById('jobRegion').textContent  = 'Error';
+    document.getElementById('jobStatus').textContent  = 'Error';
+    document.getElementById('jobLastRun').textContent = 'Error';
+    document.getElementById('jobSchedule').textContent = 'Error';
+    document.getElementById('jobSchedule').title = '';
+    document.getElementById('jobSchedule').style.cursor = 'default';
+    document.getElementById('jobNextRun').textContent  = 'Error';
+    document.getElementById('jobEmail').textContent    = 'Error';
+    document.getElementById('jobCommand').textContent  = 'Error';
+    showError(error.message || 'Failed to load job history');
+    hidePageSpinner();
+});
+
+}
+    function updateStatistics() {
+        const totalRuns = allRuns.length;
+        const successfulRuns = allRuns.filter(run => run.status && run.status.toLowerCase() === 'success').length;
+        const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
+
+        document.getElementById('totalRuns').textContent = totalRuns;
+        document.getElementById('successRate').textContent = `${successRate}%`;
+
+        if (allRuns.length > 0) {
+            // Find the last COMPLETED run (Success or Failed), skip Running jobs
+            const lastCompletedRun = allRuns.find(run => 
+                run.status && 
+                run.status.toLowerCase() !== 'running' && 
+                run.duration_seconds && 
+                run.duration_seconds > 0
+            );
+            
+            console.log('=== LAST RUN DURATION DEBUG ===');
+            console.log('Last Completed Run:', lastCompletedRun);
+            if (lastCompletedRun) {
+                console.log('Status:', lastCompletedRun.status);
+                console.log('duration_seconds:', lastCompletedRun.duration_seconds);
+            }
+            
+            const lastDuration = lastCompletedRun ? formatDuration(lastCompletedRun.duration_seconds) : 'N/A';
+            console.log('Formatted Duration:', lastDuration);
+            
+            document.getElementById('lastDuration').textContent = lastDuration;
+
+            const lastSuccessRun = allRuns.find(run => run.status && run.status.toLowerCase() === 'success');
+            const lastSuccessTime = lastSuccessRun && lastSuccessRun.start_date ?
+                formatISTDate(lastSuccessRun.start_date) : 'N/A';
+            document.getElementById('lastSuccess').textContent = lastSuccessTime;
+        }
+    }
+
+    function applyFilters() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const lastRunsFilter = document.getElementById('lastRunsFilter').value;
+    const timeRangeFilter = document.getElementById('timeRangeFilter').value;
+    let fromDate = null;
+    let toDate = null;
+
+    // Only apply date filter if timeRangeFilter is not 'all' or blank
+    if (timeRangeFilter && timeRangeFilter !== 'all') {
+        let now = new Date();
+        if (timeRangeFilter === "custom") {
+            const fromDateValue = document.getElementById('fromDate').value;
+            const toDateValue = document.getElementById('toDate').value;
+            
+            // Check if custom dates are empty
+            if (!fromDateValue || !toDateValue) {
+                showFilterNotification('Please select both from and to dates for custom range.', 'warning', 3000);
+                return;
+            }
+            
+            fromDate = new Date(fromDateValue);
+            toDate = new Date(toDateValue);
+        } else {
+            switch (timeRangeFilter) {
+                case "1h": fromDate = new Date(now.getTime() - 1*60*60*1000); break;
+                case "6h": fromDate = new Date(now.getTime() - 6*60*60*1000); break;
+                case "1d": fromDate = new Date(now.getTime() - 24*60*60*1000); break;
+                case "2d": fromDate = new Date(now.getTime() - 2*24*60*60*1000); break;
+                case "7d": fromDate = new Date(now.getTime() - 7*24*60*60*1000); break;
+                case "30d": fromDate = new Date(now.getTime() - 30*24*60*60*1000); break;
+            }
+            toDate = now;
+        }
+    }
+
+    // Filter by status and (if set) by date
+    filteredRuns = allRuns.filter(run => {
+        // Status filter
+        if (statusFilter !== 'all' && run.status && run.status.toLowerCase() !== statusFilter) return false;
+        // Time filter (only if set)
+        if (fromDate && run.start_date) {
+            // Parse IST date format: "2025-09-12 23:35:19 IST"
+            const dateStr = run.start_date.replace(' IST', '');
+            const runDate = new Date(dateStr);
+            if (!isNaN(runDate.getTime())) { // Check if date is valid
+                if (runDate < fromDate) return false;
+                if (toDate && runDate > toDate) return false;
+            }
+        }
+        return true;
+    });
+
+    // Sort by start_date descending
+    filteredRuns.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+
+    // Store the lastRunsFilter for pagination logic
+    // Don't limit filteredRuns here - let pagination handle the display
+    
+    // Reset pagination to first page when filters are applied
+    currentPage = 1;
+    
+    displayResults();
+}
+    
+    function getStatusClass(status) {
+        if (!status) return 'status-unknown';
+        const statusLower = status.toLowerCase();
+        if (statusLower.includes('success')) return 'status-success';
+        if (statusLower.includes('fail')) return 'status-failed';
+        if (statusLower.includes('running')) return 'status-running';
+        return 'status-unknown';
+    }
+    
+
+    
+    function copyLogToClipboard() {
+        const content = document.getElementById('logModalContent');
+        navigator.clipboard.writeText(content.textContent).then(() => {
+            showNotification('success', 'Copied!', 'Log content copied to clipboard');
+        }).catch(err => {
+            console.error('Failed to copy log:', err);
+            showNotification('error', 'Copy Failed', 'Unable to copy log content');
+        });
+    }
+    
+    // Filter Notification System (top-right, auto-dismiss)
+    function showFilterNotification(message, type = 'info', duration = 3000) {
+        // Remove existing filter notifications
+        const existingNotifications = document.querySelectorAll('.filter-notification');
+        existingNotifications.forEach(notif => notif.remove());
+        
+        const notification = document.createElement('div');
+        notification.className = `filter-notification filter-notification-${type}`;
+        
+        // Color scheme based on type
+        let bgColor, borderColor, icon;
+        if (type === 'warning') {
+            bgColor = '#fef3c7';
+            borderColor = '#f59e0b';
+            icon = 'fa-exclamation-triangle';
+        } else if (type === 'success') {
+            bgColor = '#d1fae5';
+            borderColor = '#10b981';
+            icon = 'fa-check-circle';
+        } else {
+            bgColor = '#dbeafe';
+            borderColor = '#3b82f6';
+            icon = 'fa-info-circle';
+        }
+        
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            border: 1px solid ${borderColor};
+            border-radius: 6px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        `;
+        
+        notification.innerHTML = `
+            <i class="fas ${icon}" style="color: ${borderColor};"></i>
+            <span style="color: #1f2937; font-size: 14px;">${message}</span>
+        `;
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        if (!document.querySelector('style[data-filter-notification]')) {
+            style.setAttribute('data-filter-notification', 'true');
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after duration with fade-out
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(20px)';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+    }
+    
+    // Card-Style Notification System
+    function showNotification(type, title, message, actionText = 'Continue', duration = 0, callback = null) {
+        // Remove existing notifications and overlays
+        const existingNotifications = document.querySelectorAll('.notification-popup');
+        const existingOverlays = document.querySelectorAll('.notification-overlay');
+        existingNotifications.forEach(notification => notification.remove());
+        existingOverlays.forEach(overlay => overlay.remove());
+        
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'notification-overlay';
+        overlay.onclick = () => closeNotification(overlay);
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification-popup ${type}`;
+        
+        // Set icon based on type
+        let icon = '';
+        switch(type) {
+            case 'success':
+                icon = 'fas fa-check';
+                actionText = actionText || 'Continue';
+                break;
+            case 'error':
+                icon = 'fas fa-times';
+                actionText = actionText || 'Try again';
+                break;
+            case 'warning':
+                icon = 'fas fa-exclamation';
+                actionText = actionText || 'OK';
+                break;
+            case 'loading':
+                icon = 'fas fa-sync-alt';
+                actionText = actionText || 'Please wait...';
+                break;
+            default:
+                icon = 'fas fa-info';
+                actionText = actionText || 'OK';
+        }
+        
+        notification.innerHTML = `
+            <button class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="icon"><i class="${icon}"></i></div>
+            <div class="title">${title}</div>
+            <div class="message">${message}</div>
+            <button class="action-btn">
+                ${actionText}
+            </button>
+        `;
+        
+        // Add event listeners
+        const closeBtn = notification.querySelector('.close-btn');
+        const actionBtn = notification.querySelector('.action-btn');
+        
+        closeBtn.onclick = () => closeNotification(closeBtn);
+        overlay.onclick = () => closeNotification(overlay);
+        
+        actionBtn.onclick = () => {
+            if (callback) callback(); // Execute callback if provided
+            closeNotification(actionBtn);
+        };
+        
+        // Add to page
+        document.body.appendChild(overlay);
+        document.body.appendChild(notification);
+        
+        // Show with animation
+        setTimeout(() => {
+            overlay.classList.add('show');
+            notification.classList.add('show');
+        }, 100);
+        
+        // Auto-hide after duration (if duration > 0)
+        if (duration > 0) {
+            setTimeout(() => {
+                closeNotification(notification.querySelector('.close-btn'));
+            }, duration);
+        }
+    }
+    
+    function closeNotification(element) {
+        // Handle both close button clicks and overlay clicks
+        const notification = element.closest ? element.closest('.notification-popup') : document.querySelector('.notification-popup');
+        const overlay = document.querySelector('.notification-overlay');
+        
+        if (notification) {
+            notification.classList.remove('show');
+        }
+        if (overlay) {
+            overlay.classList.remove('show');
+        }
+        
+        setTimeout(() => {
+            if (notification) notification.remove();
+            if (overlay) overlay.remove();
+        }, 400);
+    }
+    
+
+    // Get CSRF token from meta tag or cookie
+    function getCSRFToken() {
+        // Try to get CSRF token from meta tag first
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            return csrfMeta.getAttribute('content');
+        }
+        
+        // Try to get from cookie
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrf_token' || name === '_csrf_token') {
+                return decodeURIComponent(value);
+            }
+        }
+        
+        return null;
+    }
+    
+    // Job Control Functions
+    function triggerJob(jobId) {
+        const triggerBtn = document.querySelector('.btn-trigger');
+        const originalText = triggerBtn.innerHTML;
+        
+        // Disable button and show loading
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
+        
+        // Prepare headers
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        
+        // Add CSRF token if available
+        const csrfToken = getCSRFToken();
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
+        fetch('/dashboardview/api/trigger_job', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ job_id: jobId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', 'Success', `Job ${jobId} has been triggered successfully!`, 'Continue');
+                // Refresh data to show new run
+                setTimeout(() => {
+                    refreshData();
+                }, 2000);
+            } else if (data.status === 'running') {
+                showNotification('warning', 'Job Already Running', `Job ${jobId} is currently running. Please wait for it to complete before triggering again.`, 'OK');
+            } else {
+                showNotification('error', 'Error', data.error || data.message || 'Failed to trigger job. Please try again.', 'Try again');
+            }
+        })
+        .catch(error => {
+            console.error('Error triggering job:', error);
+            showNotification('error', 'Error', 'Network error occurred while triggering job. Please check your connection and try again.', 'Try again');
+        })
+        .finally(() => {
+            // Re-enable button
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = originalText;
+        });
+    }
+    
+    function stopJob(jobId) {
+        showNotification('warning', 'Stop Job', 'Stop job functionality not implemented yet');
+    }
+    
+    function toggleJobStatus(jobId) {
+        const toggleBtn = document.getElementById('toggleJobBtn');
+        const toggleIcon = document.getElementById('toggleJobIcon');
+        const toggleText = document.getElementById('toggleJobText');
+        const originalContent = toggleBtn.innerHTML;
+        
+        // Disable button and show loading
+        toggleBtn.disabled = true;
+        toggleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+        
+        // Prepare headers
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        
+        // Add CSRF token if available
+        const csrfToken = getCSRFToken();
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
+        fetch('/dashboardview/api/toggle_job_status', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ job_id: jobId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const action = data.status === 'enabled' ? 'enabled' : 'disabled';
+                
+                // Update button appearance immediately
+                const isPaused = data.is_paused;
+                updateToggleButton(isPaused);
+                
+                // Show notification with immediate refresh when Continue is clicked
+                showNotification('success', 'Success', `Job ${jobId} has been ${action} successfully!`, 'Continue', 0, () => {
+                    // Refresh data immediately when Continue button is clicked
+                    if (typeof refreshData === 'function') {
+                        refreshData();
+                    } else if (typeof loadJobData === 'function') {
+                        loadJobData();
+                    }
+                });
+            } else if (data.status === 'running') {
+                showNotification('warning', 'Cannot Change Status', `Job ${jobId} is currently running. Please wait for it to complete before changing its status.`, 'OK');
+            } else {
+                showNotification('error', 'Error', data.error || data.message || 'Failed to change job status. Please try again.', 'Try again');
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling job status:', error);
+            showNotification('error', 'Error', 'Network error occurred while changing job status. Please check your connection and try again.', 'Try again');
+        })
+        .finally(() => {
+            // Re-enable button
+            toggleBtn.disabled = false;
+            if (toggleBtn.innerHTML.includes('Updating...')) {
+                toggleBtn.innerHTML = originalContent;
+            }
+        });
+    }
+    
+
+
+    function formatDuration(seconds) {
+        if (!seconds || isNaN(seconds)) return 'N/A';
+        const secs = parseInt(seconds);
+        const hours = Math.floor(secs / 3600);
+        const minutes = Math.floor((secs % 3600) / 60);
+        const remainingSecs = secs % 60;
+
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${remainingSecs}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${remainingSecs}s`;
+        } else {
+            return `${remainingSecs}s`;
+        }
+    }
+
+    // Date formatting function to handle IST timezone suffix
+    function formatISTDate(dateString) {
+        if (!dateString || dateString === '' || dateString === 'Invalid Date') {
+            return 'N/A';
+        }
+        
+        try {
+            // Remove IST suffix and parse the date
+            let cleanDateString = dateString.replace(' IST', '');
+            
+            // Try to parse the cleaned date string
+            const date = new Date(cleanDateString);
+            
+            // Check if the date is valid
+            if (isNaN(date.getTime())) {
+                // If parsing failed, return the original string
+                return dateString;
+            }
+            
+            // Format the date in a readable format
+            return date.toLocaleString('en-IN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }) + ' IST';
+        } catch (error) {
+            console.warn('Date formatting error:', error, 'for date:', dateString);
+            // Return original string if all parsing fails
+            return dateString;
+        }
+    }
+
+    function showError(message) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = message;
+    }
+
+    function goBack() {
+        window.location.href = '/dashboardview/';
+    }
+
+    function showPageSpinner() {
+    const overlay = document.getElementById("pageLoadingOverlay");
+    if (overlay) overlay.style.display = "flex";
+}
+function hidePageSpinner() {
+    const overlay = document.getElementById("pageLoadingOverlay");
+    if (overlay) overlay.style.display = "none";
+}
+
+
+    function refreshData() {
+        showPageSpinner();
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('error').style.display = 'none';
+        document.getElementById('historyTable').style.display = 'none';
+        loadJobData();
+        loadJobStatus(); // Refresh the Enable/Disable button state
+    }
+    // Toggle custom date fields inline
+function toggleCustomDate() {
+    const timeRangeFilter = document.getElementById('timeRangeFilter');
+    const customDateInline = document.getElementById('customDateInline');
+    const customDateInline2 = document.getElementById('customDateInline2');
+    
+    if (timeRangeFilter.value === 'custom') {
+        customDateInline.style.display = 'flex';
+        customDateInline2.style.display = 'flex';
+    } else {
+        customDateInline.style.display = 'none';
+        customDateInline2.style.display = 'none';
+        document.getElementById('fromDate').value = '';
+        document.getElementById('toDate').value = '';
+    }
+}
+
+// Enhance the Apply Filters button feedback
+document.getElementById('applyFiltersBtn').onclick = function() {
+    const btn = this;
+    btn.classList.add('clicked');
+    applyFilters();
+    setTimeout(() => {
+        btn.classList.remove('clicked');
+    }, 700);
+};
+
+// Load job status and update toggle button
+function loadJobStatus() {
+    const jobId = '{{ job_id }}';
+    if (!jobId) return;
+    fetch(`/dashboardview/api/job_status/${encodeURIComponent(jobId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+            updateToggleButton(data.is_paused); // This is the main.html logic!
+        });
+}
+
+function updateToggleButton(isPaused) {
+    const toggleBtn = document.getElementById('toggleJobBtn');
+    const toggleIcon = document.getElementById('toggleJobIcon');
+    const toggleText = document.getElementById('toggleJobText');
+    if (!toggleBtn || !toggleIcon || !toggleText) return;
+    if (isPaused) {
+        // Job is disabled - show green Enable
+        toggleBtn.className = 'control-btn btn-toggle btn-success';
+        toggleIcon.className = 'fas fa-play-circle';
+        toggleText.textContent = 'Enable';
+        toggleBtn.title = 'Enable Job - Click to enable this job';
+    } else {
+        // Job is enabled - show orange Disable
+        toggleBtn.className = 'control-btn btn-toggle btn-warning';
+        toggleIcon.className = 'fas fa-pause-circle';
+        toggleText.textContent = 'Disable';
+        toggleBtn.title = 'Disable Job - Click to disable this job';
+    }
+}
+
+
+// Load job status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadJobStatus();
+});
+
+// Enhanced Redis-based Stop Job Function with Card-Style Notifications
+function stopJobEnhanced(jobId) {
+    console.log(`🛑 Stop job requested for: ${jobId}`);
+    
+    // First check if process is running - show loading card
+    showProcessCheckingCard(jobId);
+    
+    // Check process status first
+    checkProcessStatus(jobId);
+}
+
+function showProcessCheckingCard(jobId) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification-popup');
+    const existingOverlays = document.querySelectorAll('.notification-overlay');
+    existingNotifications.forEach(notification => notification.remove());
+    existingOverlays.forEach(overlay => overlay.remove());
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'notification-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    
+    // Create loading notification
+    const notification = document.createElement('div');
+    notification.className = 'notification-popup info';
+    notification.id = 'processCheckCard';
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        width: 380px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 40px 30px 30px;
+        text-align: center;
+        z-index: 10000;
+        opacity: 0;
+        transition: all 0.3s ease;
+    `;
+    
+    notification.innerHTML = `
+        <div class="icon" style="width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; background: #3b82f6;">
+            <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <div class="title" style="font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 12px;">Checking Process Status</div>
+        <div class="message" style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px;">
+            <div style="margin-bottom: 15px;">
+                <strong>Job ID:</strong> ${jobId}<br>
+                <strong>Action:</strong> Checking if process is running
+            </div>
+            <div style="background: #dbeafe; padding: 10px; border-radius: 6px; border-left: 4px solid #3b82f6; font-size: 14px;">
+                <i class="fas fa-info-circle" style="color: #1d4ed8; margin-right: 6px;"></i>
+                <strong>Please wait...</strong> Connecting to Redis and checking process status.
+            </div>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(overlay);
+    document.body.appendChild(notification);
+    
+    // Show with animation
+    setTimeout(() => {
+        overlay.style.opacity = '1';
+        notification.style.opacity = '1';
+        notification.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 100);
+}
+
+function checkProcessStatus(jobId) {
+    // First test API connectivity, then check job status
+    fetch(`/dashboardview/api/test`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(testData => {
+        console.log('🔧 API test response:', testData);
+        
+        // API is working, proceed with job status check
+        return fetch(`/dashboardview/api/check_job_status/${jobId}`);
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(statusResponse => {
+        console.log('📊 Job status response:', statusResponse);
+        
+        // Close the loading card
+        closeProcessCheckingCard();
+        
+        if (statusResponse.success) {
+            // Extract the actual response from Redis
+            const result = statusResponse.result || {};
+            const resultStatus = result.status || '';
+            const message = result.response?.Message || result.message || 'Process status checked';
+            const processName = result.response?.ProcessName || result.process_name || jobId;
+            const isError = result.response?.IsError || result.is_error || 'False';
+
+            console.log(`📋 Process Status - Message: ${message}, ProcessName: ${processName}, IsError: ${isError}`);
+
+            // Check if timeout (no response from C# agent)
+            if (resultStatus === 'No response received') {
+                showNotification('warning', 'Connection Timeout',
+                    `No response received from the server agent while checking status for job ${jobId}. The agent may be unavailable or busy.`,
+                    'Retry', 0, () => { showProcessCheckingCard(jobId); checkProcessStatus(jobId); });
+                return;
+            }
+
+            // Check if process is running based on the message
+            const isRunning = !message.toLowerCase().includes('not running') && !message.toLowerCase().includes('no process');
+
+            if (isRunning) {
+                // Process is running - show kill confirmation
+                showStopJobConfirmation(jobId, statusResponse);
+            } else {
+                // Process is not running - show info message
+                showProcessNotRunningCard(jobId, message, processName);
+            }
+        } else {
+            // Status check failed
+            showNotification('error', 'Status Check Failed',
+                `Failed to check status for job ${jobId}: ${statusResponse.error || 'Unknown error'}`, 'OK', 5000);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error in stop job process:', error);
+
+        // Close the loading card
+        closeProcessCheckingCard();
+
+        let errorMessage = 'Network error occurred. Please check your connection and try again.';
+
+        if (error.message && error.message.includes('JSON')) {
+            errorMessage = 'Server returned invalid response. Please restart Airflow webserver to load updated API endpoints.';
+        } else if (error.message && error.message.includes('HTTP')) {
+            errorMessage = `Server error: ${error.message}. Please check if the API endpoints are available.`;
+        }
+
+        showNotification('error', 'Connection Error',
+            `Failed to connect to server: ${errorMessage}`, 'Retry', 0,
+            () => { showProcessCheckingCard(jobId); checkProcessStatus(jobId); });
+    });
+}
+
+function closeProcessCheckingCard() {
+    const notification = document.getElementById('processCheckCard');
+    const overlay = document.querySelector('.notification-overlay');
+    
+    if (notification) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -50%) scale(0.9)';
+    }
+    if (overlay) {
+        overlay.style.opacity = '0';
+    }
+    
+    setTimeout(() => {
+        if (notification) notification.remove();
+        if (overlay) overlay.remove();
+    }, 300);
+}
+
+function showProcessNotRunningCard(jobId, message, processName) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification-popup');
+    const existingOverlays = document.querySelectorAll('.notification-overlay');
+    existingNotifications.forEach(notification => notification.remove());
+    existingOverlays.forEach(overlay => overlay.remove());
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'notification-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    
+    // Create info notification
+    const notification = document.createElement('div');
+    notification.className = 'notification-popup info';
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        width: 380px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 40px 30px 30px;
+        text-align: center;
+        z-index: 10000;
+        opacity: 0;
+        transition: all 0.3s ease;
+    `;
+    
+    notification.innerHTML = `
+        <button class="close-btn" onclick="closeNotRunningCard()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; color: #6b7280; cursor: pointer; padding: 5px;">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="icon" style="width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; background: #10b981;">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="title" style="font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 12px;">Process Status</div>
+        <div class="message" style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px;">
+            <div style="margin-bottom: 15px;">
+                <strong>Job ID:</strong> ${jobId}<br>
+                <strong>Process Name:</strong> ${processName}
+            </div>
+            <div style="background: #d1fae5; padding: 10px; border-radius: 6px; border-left: 4px solid #10b981; font-size: 14px;">
+                <i class="fas fa-check-circle" style="color: #059669; margin-right: 6px;"></i>
+                <strong>Status:</strong> ${message}
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button class="action-btn" style="padding: 12px 24px; border-radius: 8px; font-weight: 500; min-width: 100px; cursor: pointer; transition: all 0.2s; background: #3b82f6; color: white; border: none;" onclick="closeNotRunningCard()">
+                OK
+            </button>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(overlay);
+    document.body.appendChild(notification);
+    
+    // Show with animation
+    setTimeout(() => {
+        overlay.style.opacity = '1';
+        notification.style.opacity = '1';
+        notification.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 100);
+    
+    // Close on overlay click
+    overlay.onclick = () => closeNotRunningCard();
+}
+
+function closeNotRunningCard() {
+    const notification = document.querySelector('.notification-popup');
+    const overlay = document.querySelector('.notification-overlay');
+    
+    if (notification) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -50%) scale(0.9)';
+    }
+    if (overlay) {
+        overlay.style.opacity = '0';
+    }
+    
+    setTimeout(() => {
+        if (notification) notification.remove();
+        if (overlay) overlay.remove();
+    }, 300);
+}
+
+function showStopJobConfirmation(jobId) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification-popup');
+    const existingOverlays = document.querySelectorAll('.notification-overlay');
+    existingNotifications.forEach(notification => notification.remove());
+    existingOverlays.forEach(overlay => overlay.remove());
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'notification-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    
+    // Create confirmation notification
+    const notification = document.createElement('div');
+    notification.className = 'notification-popup warning';
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        width: 380px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 40px 30px 30px;
+        text-align: center;
+        z-index: 10000;
+        opacity: 0;
+        transition: all 0.3s ease;
+    `;
+    
+    notification.innerHTML = `
+        <button class="close-btn" onclick="closeStopJobConfirmation()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; color: #6b7280; cursor: pointer; padding: 5px;">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="icon" style="width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; background: #fbbc04;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="title" style="font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 12px;">Stop Job Process</div>
+        <div class="message" style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px;">
+            <div style="margin-bottom: 15px;">
+                <strong>Job ID:</strong> ${jobId}<br>
+                <strong>Action:</strong> Forcefully terminate running process
+            </div>
+            <div style="background: #fef3c7; padding: 10px; border-radius: 6px; border-left: 4px solid #f59e0b; font-size: 14px;">
+                <i class="fas fa-exclamation-triangle" style="color: #d97706; margin-right: 6px;"></i>
+                <strong>Warning:</strong> This action cannot be undone.
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button class="action-btn" style="padding: 12px 24px; border-radius: 8px; font-weight: 500; min-width: 100px; cursor: pointer; transition: all 0.2s; background: #6b7280; color: white; border: none;" onclick="closeStopJobConfirmation()">
+                Cancel
+            </button>
+            <button class="action-btn" style="padding: 12px 24px; border-radius: 8px; font-weight: 500; min-width: 100px; cursor: pointer; transition: all 0.2s; background: #ef4444; color: white; border: none; display: flex; align-items: center; gap: 6px;" onclick="confirmStopJob('${jobId}')">
+Stop Process
+            </button>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(overlay);
+    document.body.appendChild(notification);
+    
+    // Show with animation
+    setTimeout(() => {
+        overlay.style.opacity = '1';
+        notification.style.opacity = '1';
+        notification.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 100);
+    
+    // Close on overlay click
+    overlay.onclick = () => closeStopJobConfirmation();
+}
+
+function closeStopJobConfirmation() {
+    const notification = document.querySelector('.notification-popup');
+    const overlay = document.querySelector('.notification-overlay');
+    
+    if (notification) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -50%) scale(0.9)';
+    }
+    if (overlay) {
+        overlay.style.opacity = '0';
+    }
+    
+    setTimeout(() => {
+        if (notification) notification.remove();
+        if (overlay) overlay.remove();
+    }, 300);
+}
+
+function confirmStopJob(jobId) {
+    console.log(`💀 Kill job confirmed for: ${jobId}`);
+    closeStopJobConfirmation();
+    executeKillJob(jobId);
+}
+
+// Loading popup with countdown timer and progress bar after kill
+function showLoadingPopup(jobId, seconds) {
+    // Remove any existing notifications
+    document.querySelectorAll('.notification-popup').forEach(n => n.remove());
+    document.querySelectorAll('.notification-overlay').forEach(o => o.remove());
+
+    const overlay = document.createElement('div');
+    overlay.className = 'notification-overlay';
+
+    const notification = document.createElement('div');
+    notification.className = 'notification-popup loading';
+
+    notification.innerHTML = `
+        <div class="icon"><i class="fas fa-sync-alt"></i></div>
+        <div class="title">Stopping Process</div>
+        <div class="message">
+            Job <strong>${jobId}</strong> stop command sent successfully.<br>
+            Please wait while the process is being terminated...
+            <div style="margin-top: 14px;">
+                <span class="loading-countdown">${seconds}</span>
+                <span style="color: #9ca3af; font-size: 13px;"> seconds remaining</span>
+            </div>
+            <div class="loading-progress-bar">
+                <div class="loading-progress-fill" style="width: 0%;"></div>
+            </div>
+        </div>
+        <button class="action-btn">
+            <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Please wait...
+        </button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        overlay.classList.add('show');
+        notification.classList.add('show');
+    }, 50);
+
+    const progressFill = notification.querySelector('.loading-progress-fill');
+    const countdownEl = notification.querySelector('.loading-countdown');
+    let remaining = seconds;
+
+    setTimeout(() => {
+        progressFill.style.width = '100%';
+        progressFill.style.transition = `width ${seconds}s linear`;
+    }, 100);
+
+    const countdownInterval = setInterval(() => {
+        remaining--;
+        if (countdownEl) countdownEl.textContent = remaining;
+        if (remaining <= 0) {
+            clearInterval(countdownInterval);
+
+            const titleEl = notification.querySelector('.title');
+            const msgEl = notification.querySelector('.message');
+            if (titleEl) titleEl.textContent = 'Finalizing...';
+            if (msgEl) msgEl.innerHTML = `Completing stop process for job <strong>${jobId}</strong>...`;
+
+            fetch(`/dashboardview/api/update_kill_status/${jobId}`)
+            .then(response => response.json())
+            .then(data => {
+                notification.classList.remove('show');
+                overlay.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                    overlay.remove();
+                    if (data.success) {
+                        refreshData();
+                        showNotification('success', 'Job Stopped Successfully',
+                            `Job <strong>${jobId}</strong> has been stopped and marked as Failed.`, 'OK', 5000);
+                    } else {
+                        showNotification('error', 'Stop Process Failed',
+                            `Failed to complete stop for job <strong>${jobId}</strong>.<br><br>Click <strong>Retry</strong> to try again.`,
+                            'Retry', 0, () => retryDbUpdate(jobId));
+                    }
+                }, 400);
+            })
+            .catch(error => {
+                notification.classList.remove('show');
+                overlay.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                    overlay.remove();
+                    showNotification('error', 'Connection Error',
+                        `Network error while stopping job <strong>${jobId}</strong>.<br><br>Click <strong>Retry</strong> to try again.`,
+                        'Retry', 0, () => retryDbUpdate(jobId));
+                }, 400);
+            });
+        }
+    }, 1000);
+}
+
+// Retry stop process finalization
+function retryDbUpdate(jobId) {
+    showNotification('loading', 'Retrying',
+        `Completing stop process for job <strong>${jobId}</strong>...`, 'Please wait...', 0);
+
+    fetch(`/dashboardview/api/update_kill_status/${jobId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            refreshData();
+            showNotification('success', 'Job Stopped Successfully',
+                `Job <strong>${jobId}</strong> has been stopped and marked as Failed.`, 'OK', 5000);
+        } else {
+            showNotification('error', 'Stop Process Failed',
+                `Failed to complete stop for job <strong>${jobId}</strong>.<br><br>Click <strong>Retry</strong> to try again.`,
+                'Retry', 0, () => retryDbUpdate(jobId));
+        }
+    })
+    .catch(error => {
+        showNotification('error', 'Connection Error',
+            `Network error while stopping job <strong>${jobId}</strong>.<br><br>Click <strong>Retry</strong> to try again.`,
+            'Retry', 0, () => retryDbUpdate(jobId));
+    });
+}
+
+function executeKillJob(jobId) {
+    // Show loading popup immediately (popup 1 of 2)
+    showLoadingPopup(jobId, 15);
+
+    // Send kill command using GET to kill_job endpoint (GET bypasses CSRF)
+    console.log('💀 Using kill_job endpoint for kill request...');
+    fetch(`/dashboardview/api/kill_job/${jobId}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(killResponse => {
+        console.log('💀 Kill response:', killResponse);
+
+        const resultStatus = killResponse.result?.status || '';
+
+        if (killResponse.success && resultStatus !== 'No response received') {
+            // C# agent confirmed the kill — loading popup already showing, let it continue
+            console.log('💀 Kill confirmed, loading popup will handle DB update after countdown');
+
+        } else if (killResponse.success && resultStatus === 'No response received') {
+            // Kill command sent but no confirmation from C# agent (timeout)
+            showNotification('warning', 'No Response from Agent',
+                `Kill command was sent for job <strong>${jobId}</strong>, but the agent did not respond in time. The job may still have been stopped.<br><br>Click <strong>Retry</strong> to send the kill command again.`,
+                'Retry', 0, () => executeKillJob(jobId));
+
+        } else {
+            // success: false — server returned an error
+            showNotification('error', 'Kill Process Failed',
+                `${killResponse.error || 'Unknown error occurred while terminating the job.'}<br><br>Click <strong>Retry</strong> to try again.`,
+                'Retry', 0, () => executeKillJob(jobId));
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error killing job:', error);
+        showNotification('error', 'Connection Error',
+            `Network error while stopping job <strong>${jobId}</strong>. Please check your connection.<br><br>Click <strong>Retry</strong> to try again.`,
+            'Retry', 0, () => executeKillJob(jobId));
+    });
+}
+
+function showStopJobModal(jobId, statusResponse) {
+    console.log('🔍 Showing stop job modal for:', jobId, statusResponse);
+    
+    // Populate modal with job information
+    document.getElementById('stopJobId').textContent = jobId;
+    
+    // Extract status information from response
+    const result = statusResponse.result || {};
+    const rawStatus = result.response?.Status || result.status || 'NA';
+    const server = result.response?.Server || result.server || 'NA';
+    const processId = result.response?.ProcessId || result.process_id || 'NA';
+    
+    // Convert technical status to simple, user-friendly text with color coding
+    const statusElement = document.getElementById('stopJobStatus');
+    let displayStatus = 'Not Running';
+    let statusColor = '#6b7280'; // Default gray color
+    
+    // Check if process is running based on various status indicators
+    if (rawStatus && (rawStatus.toLowerCase().includes('running') || 
+                     rawStatus.toLowerCase().includes('active') ||
+                     rawStatus.toLowerCase().includes('started') ||
+                     rawStatus === 'true' ||
+                     result.response?.ProcessRunning === 'true')) {
+        displayStatus = 'Running';
+        statusColor = '#d97706'; // Amber color for running status
+    }
+    
+    statusElement.textContent = displayStatus;
+    statusElement.style.color = statusColor;
+    statusElement.style.fontWeight = '600';
+    
+    // Add a small status indicator badge
+    if (displayStatus === 'Running') {
+        statusElement.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; background: ${statusColor}; border-radius: 50%; display: inline-block;"></span>${displayStatus}</span>`;
+    } else {
+        statusElement.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; background: ${statusColor}; border-radius: 50%; display: inline-block;"></span>${displayStatus}</span>`;
+    }
+    document.getElementById('stopJobServer').textContent = server;
+    
+    // Show the modal
+    const modal = document.getElementById('stopJobModal');
+    modal.style.display = 'block';
+    
+    // Set up event handlers
+    const cancelBtn = document.getElementById('cancelStopJob');
+    const confirmBtn = document.getElementById('confirmStopJob');
+    
+    // Remove any existing event listeners
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    // Add new event listeners
+    newCancelBtn.addEventListener('click', closeStopJobModal);
+    newConfirmBtn.addEventListener('click', () => confirmKillJob(jobId));
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeStopJobModal();
+        }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && modal.style.display === 'block') {
+            closeStopJobModal();
+        }
+    });
+}
+
+function confirmKillJob(jobId) {
+    console.log(`💀 Kill job confirmed for: ${jobId}`);
+    
+    const resultDiv = document.getElementById('stopJobResult');
+    const confirmBtn = document.getElementById('confirmStopJob');
+    const cancelBtn = document.getElementById('cancelStopJob');
+    
+    // Show loading state
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Killing Process...';
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
+    
+    // Show loading message in result area
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fas fa-spinner fa-spin" style="color: #0ea5e9;"></i>
+                <span style="color: #0ea5e9; font-weight: 600;">Sending Kill Command...</span>
+            </div>
+            <p style="margin: 10px 0 0 0; color: #0ea5e9; font-size: 14px;">
+                Please wait while we terminate the job process via Redis.
+            </p>
+        </div>
+    `;
+    
+    // Send kill command using GET to kill_job endpoint (GET bypasses CSRF)
+    console.log('💀 Using kill_job endpoint for kill request...');
+    fetch(`/dashboardview/api/kill_job/${jobId}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(killResponse => {
+        console.log('💀 Kill response:', killResponse);
+
+        const resultStatus = killResponse.result?.status || '';
+
+        if (killResponse.success && resultStatus !== 'No response received') {
+            // C# agent confirmed the kill — close modal, wait 15s, then update DB
+            closeStopJobModal();
+            showLoadingPopup(jobId, 15);
+
+        } else if (killResponse.success && resultStatus === 'No response received') {
+            // Kill command sent but C# agent didn't respond (timeout)
+            resultDiv.innerHTML = `
+                <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-clock" style="color: #d97706;"></i>
+                        <span style="color: #d97706; font-weight: 600;">No Response from Agent</span>
+                    </div>
+                    <p style="margin: 10px 0 0 0; color: #d97706; font-size: 14px;">
+                        Kill command was sent for job <strong>${jobId}</strong>, but the agent did not respond in time.
+                        The job may still have been stopped. Click <strong>Retry</strong> to try again.
+                    </p>
+                </div>
+            `;
+
+            // Show Retry button
+            confirmBtn.innerHTML = '<i class="fas fa-redo"></i> Retry';
+            confirmBtn.style.background = '#d97706';
+            confirmBtn.disabled = false;
+            cancelBtn.disabled = false;
+
+        } else {
+            // success: false — server returned an error
+            resultDiv.innerHTML = `
+                <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-exclamation-circle" style="color: #dc2626;"></i>
+                        <span style="color: #dc2626; font-weight: 600;">Kill Process Failed</span>
+                    </div>
+                    <p style="margin: 10px 0 0 0; color: #dc2626; font-size: 14px;">
+                        ${killResponse.error || 'Unknown error occurred while terminating the job.'}<br>
+                        Click <strong>Retry</strong> to try again.
+                    </p>
+                </div>
+            `;
+
+            // Show Retry button
+            confirmBtn.innerHTML = '<i class="fas fa-redo"></i> Retry';
+            confirmBtn.disabled = false;
+            cancelBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error killing job:', error);
+        
+        // Show error message
+        resultDiv.innerHTML = `
+            <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-exclamation-circle" style="color: #dc2626;"></i>
+                    <span style="color: #dc2626; font-weight: 600;">Connection Error</span>
+                </div>
+                <p style="margin: 10px 0 0 0; color: #dc2626; font-size: 14px;">
+                    Network error occurred while killing job. Please check your connection and try again.
+                </p>
+            </div>
+        `;
+        
+        // Re-enable buttons with Retry
+        confirmBtn.innerHTML = '<i class="fas fa-redo"></i> Retry';
+        confirmBtn.style.background = '#ef4444';
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+    });
+}
+
+function closeStopJobModal() {
+    const modal = document.getElementById('stopJobModal');
+    modal.style.display = 'none';
+    
+    // Reset modal content
+    document.getElementById('stopJobId').textContent = '-';
+    document.getElementById('stopJobStatus').textContent = '-';
+    document.getElementById('stopJobServer').textContent = '-';
+    document.getElementById('stopJobResult').style.display = 'none';
+    document.getElementById('stopJobResult').innerHTML = '';
+    
+    // Reset button states
+    const confirmBtn = document.getElementById('confirmStopJob');
+    const cancelBtn = document.getElementById('cancelStopJob');
+    confirmBtn.innerHTML = '<span>Stop Process</span>';
+    confirmBtn.style.display = 'flex';
+    confirmBtn.disabled = false;
+    cancelBtn.innerHTML = 'Cancel';
+    cancelBtn.disabled = false;
+}
+
+// Update the existing stopJob function to use the enhanced version
+function stopJob(jobId) {
+    stopJobEnhanced(jobId);
+}
+
+</script>
+
+<!-- Premium Chatbot -->
+<button class="chatbot-toggler" style="display:none !important;">
+    <span class="fa-solid fa-robot"></span>
+    <span class="fa-solid fa-xmark" style="display:none;"></span>
+</button>
+<div class="chatbot-container" style="display:none !important;">
+    <div class="chat-widget">
+        <div class="chat-header">
+            <h2><i class="fas fa-robot"></i> Airflow Assistant</h2>
+            <span class="chat-close-btn fa-solid fa-xmark"></span>
+        </div>
+        <div class="chat-body">
+            <div class="chat-message bot">
+                <div class="message-content">
+                    <p>Good Day! 👋 How may I assist you with Airflow today?</p>
+                    <p>I can help you with:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Job execution troubleshooting</li>
+                        <li>DAG configuration questions</li>
+                        <li>Scheduling and cron expressions</li>
+                        <li>Performance optimization tips</li>
+                        <li>Error analysis and solutions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="chat-input">
+            <textarea placeholder="Ask me anything about Airflow..." spellcheck="false" required></textarea>
+            <span id="send-btn" class="fa-solid fa-paper-plane"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+// Chatbot functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const chatbotToggler = document.querySelector(".chatbot-toggler");
+    const body = document.querySelector("body");
+    const chatInput = document.querySelector(".chat-input textarea");
+    const sendBtn = document.querySelector("#send-btn");
+    const chatBody = document.querySelector(".chat-body");
+    
+    // Toggle chatbot visibility
+    chatbotToggler.addEventListener("click", () => {
+        body.classList.toggle("show-chatbot");
+        const isChatbotVisible = body.classList.contains("show-chatbot");
+        chatbotToggler.querySelector("span:nth-child(1)").style.display = isChatbotVisible ? "none" : "inline";
+        chatbotToggler.querySelector("span:nth-child(2)").style.display = isChatbotVisible ? "inline" : "none";
+        
+        // Focus on input when opening
+        if (isChatbotVisible) {
+            setTimeout(() => chatInput.focus(), 300);
+        }
+    });
+    
+    // Send message function
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+        
+        // Add user message
+        addMessage(message, 'user');
+        chatInput.value = '';
+        
+        // Simulate bot response (you can replace this with actual AI integration)
+        setTimeout(() => {
+            const response = generateAirflowResponse(message);
+            addMessage(response, 'bot');
+        }, 1000);
+    }
+    
+    // Add message to chat
+    function addMessage(message, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${sender}`;
+        messageDiv.innerHTML = `<div class="message-content"><p>${message}</p></div>`;
+        chatBody.appendChild(messageDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+    
+    // Generate Airflow-related responses
+    function generateAirflowResponse(message) {
+        const lowerMessage = message.toLowerCase();
+        
+        if (lowerMessage.includes('job') && lowerMessage.includes('fail')) {
+            return 'Job failures can occur due to various reasons:<br>• Check the job logs for specific error messages<br>• Verify data dependencies and connections<br>• Ensure sufficient resources are available<br>• Review task timeout settings<br><br>Would you like me to help you analyze a specific error?';
+        }
+        
+        if (lowerMessage.includes('schedule') || lowerMessage.includes('cron')) {
+            return 'Airflow uses cron expressions for scheduling:<br>• <code>0 0 * * *</code> - Daily at midnight<br>• <code>0 */6 * * *</code> - Every 6 hours<br>• <code>0 9 * * 1-5</code> - Weekdays at 9 AM<br><br>You can also use preset schedules like <code>@daily</code>, <code>@hourly</code>, etc.';
+        }
+        
+        if (lowerMessage.includes('duration') || lowerMessage.includes('performance')) {
+            return 'To optimize job performance:<br>• Monitor execution duration trends<br>• Check for resource bottlenecks<br>• Consider parallel task execution<br>• Optimize SQL queries and data processing<br>• Use appropriate worker configurations';
+        }
+        
+        if (lowerMessage.includes('error') || lowerMessage.includes('debug')) {
+            return 'For debugging Airflow issues:<br>• Check the Airflow logs in the UI<br>• Review task instance details<br>• Verify connections and variables<br>• Test tasks individually<br>• Check system resources and dependencies';
+        }
+        
+        if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+            return 'Hello! 👋 I\'m here to help you with Airflow. You can ask me about job troubleshooting, scheduling, performance optimization, or any other Airflow-related questions!';
+        }
+        
+        // Default response
+        return 'I\'m here to help with Airflow! You can ask me about:<br>• Job execution and troubleshooting<br>• DAG scheduling and configuration<br>• Performance optimization<br>• Error analysis<br>• Best practices<br><br>What specific Airflow topic would you like to discuss?';
+    }
+    
+    // Send message on button click
+    sendBtn.addEventListener('click', sendMessage);
+    
+    // Send message on Enter key
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Auto-resize textarea
+    chatInput.addEventListener('input', function() {
+        this.style.height = '55px';
+        this.style.height = Math.min(this.scrollHeight, 180) + 'px';
+    });
+});
+</script>
+
+
+<!-- Trigger Job Modal -->
+<!-- Trigger Job Modal (compact modern UI) -->
+<div id="triggerJobModal" class="modal-overlay">
+    <div class="modal-container" style="width:500px;max-width:99vw;">
+      <div class="modal-header" style="padding:14px 20px; border-bottom:1px solid #eee;">
+        <h2 style="
+  font-size:1.1rem;
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  word-break:break-word;
+  max-width:98%;
+">
+  <span id="triggerModalIcon" style="font-size:1.3rem;min-width:24px;"></span>
+  <span style="word-break:break-word;max-width:90%;">
+    Trigger Job: <span id="triggerModalJobId" style="color:#6d28d9;font-weight:600;word-break:break-word;"></span>
+  </span>
+</h2>
+        <button class="modal-close" onclick="closeTriggerJobModal()" style="font-size:1.2rem;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:22px 18px 14px;text-align:center;min-height:90px;">
+        <!-- Spinner or icon -->
+        <div id="triggerJobSpinner" style="margin-bottom:12px;">
+          <span class="loading-spinner" style="width:30px;height:30px;border-width:3px;"></span>
+        </div>
+        <!-- Message -->
+        <div id="triggerJobStatusText" style="margin-bottom:18px;font-size:0.97rem;min-height:32px;">Checking job status...</div>
+        <!-- Error box -->
+        <div id="triggerJobErrorBox" style="display:none;margin-bottom:12px;padding:8px 12px;background:#fee2e2;color:#b91c1c;border-radius:6px;font-size:0.9rem;box-shadow:0 1px 2px rgba(191,28,28,0.08);"></div>
+        <!-- Buttons -->
+        <div style="display:flex;justify-content:center;gap:14px;">
+          <button id="triggerModalBtn" class="btn btn-success" style="min-width:88px;font-size:0.98rem;" disabled onclick="doTriggerJobFromModal()">Trigger</button>
+          <button class="btn btn-danger" style="min-width:88px;font-size:0.98rem;" onclick="closeTriggerJobModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Enable/Disable Job Modal (Place just before </body>) -->
+<div id="toggleJobModal" class="modal-overlay">
+    <div class="modal-container" style="width:500px;max-width:99vw;">
+      <div class="modal-header">
+        <h2 style="
+  font-size:1.1rem;
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  word-break:break-word;
+  max-width:98%;
+">
+  <span id="toggleModalIcon" style="font-size:1.3rem;min-width:24px;"></span>
+  <span style="word-break:break-word;max-width:90%;">
+    <span id="toggleActionText"></span> Job: <span id="toggleModalJobId" style="color:#6d28d9;font-weight:600;word-break:break-word;"></span>
+  </span>
+</h2>
+        <button class="modal-close" onclick="closeToggleJobModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="toggleJobSpinner"><span class="loading-spinner"></span></div>
+        <div id="toggleJobStatusText">Checking job status...</div>
+        <div id="toggleJobErrorBox"></div>
+        <div style="display:flex;justify-content:center;gap:14px;">
+          <button id="toggleModalBtn" class="btn btn-success" disabled onclick="doToggleJobFromModal()">Continue</button>
+          <button class="btn btn-danger" onclick="closeToggleJobModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</body>
+</html>
